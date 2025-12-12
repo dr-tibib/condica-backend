@@ -17,6 +17,7 @@
         "backpack/settings": "^3.2",
         "backpack/theme-tabler": "^2.0",
         "laravel/framework": "^12.0",
+        "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10.1",
         "stancl/tenancy": "^3.9"
     },
