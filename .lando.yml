@@ -1,0 +1,17 @@
+name: condica
+recipe: laravel
+proxy:
+  appserver:
+    - condica.lndo.site
+    - condica-admin.lndo.site
+    - oaksoft-condica.lndo.site
+config:
+  php: 8.4
+  webroot: public
+  cache: redis
+services:
+  database:
+    type: mysql
+    portforward: 32778
+    run_as_root:
+      - 'mysql -uroot --execute "GRANT ALL PRIVILEGES ON *.* TO ''laravel''@''%'';"'    
