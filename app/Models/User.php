@@ -208,7 +208,7 @@ class User extends Authenticatable implements Syncable
             if ($event->event_type === 'check_in') {
                 $currentCheckIn = $event;
             } elseif ($event->event_type === 'check_out' && $currentCheckIn !== null) {
-                $totalMinutes += $currentCheckIn->event_time->diffInMinutes($event->event_time);
+                $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes($event->event_time);
                 $currentCheckIn = null;
             }
         }

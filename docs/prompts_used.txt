@@ -1,0 +1,135 @@
+Create Laravel migrations for an EVENT-BASED presence tracking system in tenant context only:
+
+1. **workplaces table:**
+   - id, name
+   - latitude (decimal 10,8), longitude (decimal 11,8), radius (integer, default 100)
+   - timezone, wifi_ssid (nullable), is_active (boolean)
+   - timestamps and proper indexes
+
+2. **presence_events table (EVENT-BASED):**
+   - id, user_id, workplace_id
+   - event_type (enum: check_in, check_out) - indexed
+   - event_time (timestamp) - indexed
+   - method (enum: auto, manual)
+   - latitude, longitude, accuracy (nullable)
+   - device_info, app_version, notes (nullable)
+   - pair_event_id (foreign key to link check-out with check-in)
+   - timestamps
+   - Composite indexes: (user_id, event_time), (workplace_id, event_time), (user_id, event_type, event_time)
+
+3. **Add to users table:**
+   - default_workplace_id (foreign key), employee_id, department, role
+
+4. **devices table:**
+   - id, user_id, device_token (unique), device_name, platform (ios/android)
+   - app_version, os_version, last_active_at
+   - timestamps
+
+Ensure all foreign keys, indexes, and multi-tenant fields (tenant_id) are properly set up.
+Each check-in and check-out is a SEPARATE EVENT record.
+
+
+Create Eloquent models for the event-based presence tracking system:
+
+1. **PresenceEvent model:**
+   - Fillable: user_id, workplace_id, event_type, event_time, method, latitude, longitude, accuracy, device_info, app_version, notes, pair_event_id
+   - Casts: event_time to datetime
+   - Relationships: belongsTo User, Workplace, pairedEvent (self-reference)
+   - Scopes: checkIns(), checkOuts(), today(), forUser($id), forWorkplace($id), automatic(), manual()
+   - Methods: isCheckIn(), isCheckOut(), getPairedEvent(), getDurationMinutes()
+
+2. **Workplace model:**
+   - Relationships: hasMany PresenceEvent
+   - Methods: isLocationWithinGeofence($lat, $lon), calculateDistance($lat, $lon) using Haversine formula
+   - Methods: currentlyPresentUsers(), todayCheckIns(), todayCheckOuts()
+   - Multi-tenant scope if applicable
+
+3. **Device model:**
+   - Relationship: belongsTo User
+
+4. **Update User model:**
+   - Relationships: hasMany presenceEvents, latestPresenceEvent (latest of many), latestCheckIn, latestCheckOut, devices
+   - Methods: isCurrentlyPresent() (check if latest event is check_in)
+   - Methods: getCurrentWorkplace(), getTodayMinutes(), getWeekMinutes()
+
+Include proper fillable arrays, casts, and follow Laravel best practices.
+
+
+Create service classes for business logic:
+
+1. **PresenceService** (app/Services/PresenceService.php):
+   Methods needed:
+   - checkIn(User, workplaceId, lat, lon, accuracy, method, deviceInfo, appVersion)
+     * Validate user not already checked in
+     * Validate geofence if method is 'auto'
+     * Create check_in event record
+     * Fire UserCheckedIn event
+   
+   - checkOut(User, lat, lon, accuracy, method, deviceInfo, appVersion)
+     * Validate user is currently checked in
+     * Create check_out event record linked to check_in (pair_event_id)
+     * Fire UserCheckedOut event
+   
+   - getActivePresenceByWorkplace(workplaceId)
+     * Return users with latest event = check_in for this workplace
+   
+   - getUserSessionsForDate(User, date)
+     * Return array of paired check-in/check-out events for the date
+     * Include active session if user is still checked in
+   
+   - autoCheckOutStaleCheckIns(hoursThreshold = 12)
+     * Find check-in events without paired check-out older than threshold
+     * Create auto check-out events
+
+2. **GeofenceService** (app/Services/GeofenceService.php):
+   Methods needed:
+   - isWithinGeofence($userLat, $userLon, $centerLat, $centerLon, $radius)
+   - calculateDistance($lat1, $lon1, $lat2, $lon2) using Haversine formula
+   - getNearestWorkplace($lat, $lon)
+
+3. **NotificationService** (app/Services/NotificationService.php):
+   Stub for now, will handle push notifications later
+
+Use dependency injection, proper error handling, and database transactions.
+
+Create RESTful API with Laravel Sanctum authentication for tenant context only:
+
+Routes (routes/api.php):
+- POST /api/login (public)
+- POST /api/logout (auth:sanctum)
+- GET /api/user (auth:sanctum)
+- POST /api/presence/check-in (auth:sanctum)
+- POST /api/presence/check-out (auth:sanctum)
+- GET /api/presence/current (auth:sanctum)
+- GET /api/presence/history (auth:sanctum)
+- GET /api/presence/today (auth:sanctum)
+- GET /api/workplaces (auth:sanctum)
+- POST /api/devices/register (auth:sanctum)
+
+Controllers needed:
+1. **API/Auth/LoginController:**
+   - login(): validate credentials, create Sanctum token, return user + token
+
+2. **API/Auth/LogoutController:**
+   - logout(): revoke current token
+
+3. **API/PresenceController:**
+   - checkIn(CheckInRequest): call PresenceService->checkIn()
+   - checkOut(CheckOutRequest): call PresenceService->checkOut()
+   - current(): return latest event + isPresent status + duration
+   - history(): paginated list of events grouped by date with sessions
+   - today(): today's sessions with total minutes
+
+4. **API/WorkplaceController:**
+   - index(): list all workplaces with distance from user's location
+
+5. **API/DeviceController:**
+   - register(): save device token for push notifications
+
+Request validation classes:
+- CheckInRequest: validate workplace_id, latitude, longitude, accuracy, method
+- CheckOutRequest: validate latitude, longitude, accuracy, method
+
+All responses as JSON with proper HTTP status codes.
+Ensure tenant context is maintained throughout based on domain.
+Use industry standard best practices.

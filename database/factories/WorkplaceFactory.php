@@ -17,7 +17,12 @@ class WorkplaceFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'name' => fake()->company().' Office',
+            'latitude' => fake()->latitude(),
+            'longitude' => fake()->longitude(),
+            'radius' => fake()->numberBetween(50, 200),
+            'timezone' => 'UTC',
+            'is_active' => true,
         ];
     }
 }

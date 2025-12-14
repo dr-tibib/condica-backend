@@ -11,9 +11,13 @@
 |
 */
 
+// API tests use TenantTestCase (no RefreshDatabase for multi-tenant)
+pest()->extend(Tests\TenantTestCase::class)
+    ->in('Feature/Feature/API');
+
+// Unit tests use TestCase
 pest()->extend(Tests\TestCase::class)
- // ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
-    ->in('Feature');
+    ->in('Unit');
 
 /*
 |--------------------------------------------------------------------------
