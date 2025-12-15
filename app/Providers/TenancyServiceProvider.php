@@ -13,6 +13,8 @@ use Stancl\Tenancy\Jobs;
 use Stancl\Tenancy\Listeners;
 use Stancl\Tenancy\Middleware;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
+use Backpack\Basset\BassetManager;
+use Illuminate\Support\Facades\Storage;
 
 class TenancyServiceProvider extends ServiceProvider
 {
@@ -104,6 +106,8 @@ class TenancyServiceProvider extends ServiceProvider
 
     public function boot()
     {
+        $this->makeBassetTenantAware();
+
         $this->bootEvents();
         $this->mapRoutes();
 
@@ -131,6 +135,18 @@ class TenancyServiceProvider extends ServiceProvider
                     ->group(base_path('routes/tenant.php'));
             }
         });
+    }
+
+    protected function makeBassetTenantAware()
+    {
+        Storage::set(config('backpack.basset.disk'), Storage::createLocalDriver([
+            'driver' => 'local',
+            'root' => storage_path('app/public'),
+            'url' => request()->getSchemeAndHttpHost() . '/storage',
+            'visibility' => 'public',
+        ]));
+
+        $this->app->instance('basset', new BassetManager());
     }
 
     protected function makeTenancyMiddlewareHighestPriority()
