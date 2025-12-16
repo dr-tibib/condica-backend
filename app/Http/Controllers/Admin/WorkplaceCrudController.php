@@ -86,17 +86,13 @@ class WorkplaceCrudController extends CrudController
 
         CRUD::field('location_map')
             ->label('Location')
-            ->type('address_google')
-            ->store_as_json(false)
+            ->type('google_map')
+            ->map_options([
+                'default_lat' => 46.7712,
+                'default_lng' => 23.6236,
+                'height' => 400
+            ])
             ->wrapper(['class' => 'form-group col-md-12']);
-
-        CRUD::field('latitude')
-            ->type('hidden')
-            ->default(0);
-
-        CRUD::field('longitude')
-            ->type('hidden')
-            ->default(0);
 
         CRUD::field('radius')
             ->label('Geofence Radius (meters)')
@@ -112,7 +108,7 @@ class WorkplaceCrudController extends CrudController
         CRUD::field('timezone')
             ->label('Timezone')
             ->type('select_from_array')
-            ->options(\DateTimeZone::listIdentifiers())
+            ->options(array_combine(\DateTimeZone::listIdentifiers(), \DateTimeZone::listIdentifiers()))
             ->allows_null(false)
             ->default('UTC')
             ->hint('Timezone for this workplace location');

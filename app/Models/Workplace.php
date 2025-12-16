@@ -24,6 +24,7 @@ class Workplace extends Model
      */
     protected $fillable = [
         'name',
+        'location_map',
         'latitude',
         'longitude',
         'radius',
@@ -45,6 +46,30 @@ class Workplace extends Model
             'radius' => 'integer',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Get and set the location_map attribute for google_map field.
+     * Converts between JSON format and separate latitude/longitude columns.
+     */
+    protected function locationMap(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: function ($value, $attributes) {
+                return json_encode([
+                    'lat' => (float) ($attributes['latitude'] ?? 0),
+                    'lng' => (float) ($attributes['longitude'] ?? 0),
+                    'formatted_address' => ''
+                ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+            },
+            set: function ($value) {
+                $location = json_decode($value);
+                return [
+                    'latitude' => $location->lat ?? 0,
+                    'longitude' => $location->lng ?? 0,
+                ];
+            }
+        );
     }
 
     /**
@@ -89,8 +114,8 @@ class Workplace extends Model
         $lonDelta = $lonTo - $lonFrom;
 
         $a = sin($latDelta / 2) * sin($latDelta / 2) +
-             cos($latFrom) * cos($latTo) *
-             sin($lonDelta / 2) * sin($lonDelta / 2);
+            cos($latFrom) * cos($latTo) *
+            sin($lonDelta / 2) * sin($lonDelta / 2);
 
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 

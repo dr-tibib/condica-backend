@@ -1,0 +1,339 @@
+{
+    "info": {
+        "_postman_id": "condica-api",
+        "name": "Condica API",
+        "description": "API Documentation for the Condica frontend application.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://oaksoft-condica.lndo.site/api",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.token) {",
+                                    "    pm.collectionVariables.set(\"token\", jsonData.token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"device_name\": \"My iPhone\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/logout",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "logout"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get User",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Presence",
+            "item": [
+                {
+                    "name": "Check In",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"workplace_id\": 1,\n  \"latitude\": 44.4268,\n  \"longitude\": 26.1025,\n  \"accuracy\": 15,\n  \"method\": \"auto\",\n  \"notes\": \"Arrived early\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/presence/check-in",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "presence",
+                                "check-in"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Check Out",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"latitude\": 44.4268,\n  \"longitude\": 26.1025,\n  \"accuracy\": 15,\n  \"method\": \"manual\",\n  \"notes\": \"Leaving for lunch\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/presence/check-out",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "presence",
+                                "check-out"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Current Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/presence/current",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "presence",
+                                "current"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "History",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/presence/history?page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "presence",
+                                "history"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Today's Summary",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/presence/today",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "presence",
+                                "today"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Workplaces",
+            "item": [
+                {
+                    "name": "List Workplaces",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/workplaces?latitude=44.42&longitude=26.10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "workplaces"
+                            ],
+                            "query": [
+                                {
+                                    "key": "latitude",
+                                    "value": "44.42",
+                                    "description": "Optional: User's latitude"
+                                },
+                                {
+                                    "key": "longitude",
+                                    "value": "26.10",
+                                    "description": "Optional: User's longitude"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Devices",
+            "item": [
+                {
+                    "name": "Register Device",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"device_token\": \"fcm_token_or_apns_token\",\n  \"device_name\": \"My iPhone 14\",\n  \"platform\": \"ios\",\n  \"app_version\": \"1.0.0\",\n  \"os_version\": \"17.0\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/devices/register",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "devices",
+                                "register"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
