@@ -53,7 +53,7 @@ class PresenceEventCrudController extends CrudController
                 $badge = $entry->event_type === 'check_in' ? 'bg-success' : 'bg-info';
                 $text = ucfirst(str_replace('_', ' ', $entry->event_type));
 
-                return '<span class="badge ' . $badge . '">' . $text . '</span>';
+                return '<span class="badge ' . $badge . ' text-white">' . $text . '</span>';
             })
             ->escaped(false);
 
@@ -65,7 +65,7 @@ class PresenceEventCrudController extends CrudController
             ->function(function ($entry) {
                 $badge = $entry->method === 'auto' ? 'bg-primary' : 'bg-secondary';
 
-                return '<span class="badge ' . $badge . '">' . ucfirst($entry->method) . '</span>';
+                return '<span class="badge ' . $badge . ' text-white">' . ucfirst($entry->method) . '</span>';
             })
             ->escaped(false);
 
