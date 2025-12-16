@@ -139,14 +139,13 @@ class TenancyServiceProvider extends ServiceProvider
 
     protected function makeBassetTenantAware()
     {
-        Storage::set(config('backpack.basset.disk'), Storage::createLocalDriver([
-            'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => request()->getSchemeAndHttpHost() . '/storage',
-            'visibility' => 'public',
-        ]));
+        $currentHost = request()->getSchemeAndHttpHost();
+        $url = $currentHost . '/storage';
 
-        $this->app->instance('basset', new BassetManager());
+        config([
+            'filesystems.disks.basset.url' => $url,
+            'filesystems.disks.public.url' => $url,
+        ]);
     }
 
     protected function makeTenancyMiddlewareHighestPriority()

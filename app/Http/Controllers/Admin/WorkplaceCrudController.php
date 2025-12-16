@@ -27,7 +27,7 @@ class WorkplaceCrudController extends CrudController
     public function setup()
     {
         CRUD::setModel(\App\Models\Workplace::class);
-        CRUD::setRoute(config('backpack.base.route_prefix').'/workplace');
+        CRUD::setRoute(config('backpack.base.route_prefix') . '/workplace');
         CRUD::setEntityNameStrings('workplace', 'workplaces');
     }
 
@@ -44,7 +44,7 @@ class WorkplaceCrudController extends CrudController
 
         CRUD::column('location')->label('Location')->type('closure')->function(function ($entry) {
             if ($entry->latitude && $entry->longitude) {
-                return number_format($entry->latitude, 6).', '.number_format($entry->longitude, 6);
+                return number_format($entry->latitude, 6) . ', ' . number_format($entry->longitude, 6);
             }
 
             return '-';
@@ -61,7 +61,7 @@ class WorkplaceCrudController extends CrudController
         CRUD::column('currently_present')->label('Present Now')->type('closure')->function(function ($entry) {
             $count = $entry->currentlyPresentUsers()->count();
 
-            return $count > 0 ? '<span class="badge bg-success">'.$count.' present</span>' : '<span class="badge bg-secondary">None</span>';
+            return $count > 0 ? '<span class="badge bg-success">' . $count . ' present</span>' : '<span class="badge bg-secondary">None</span>';
         })->escaped(false);
 
         CRUD::column('created_at')->label('Created');

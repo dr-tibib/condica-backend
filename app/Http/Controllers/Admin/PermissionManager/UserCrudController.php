@@ -27,7 +27,7 @@ class UserCrudController extends BaseUserCrudController
         ]);
 
         $this->crud->addColumn([
-            'name' => 'default_workplace',
+            'name' => 'defaultWorkplace',
             'label' => 'Default Workplace',
             'type' => 'relationship',
             'attribute' => 'name',
@@ -41,7 +41,7 @@ class UserCrudController extends BaseUserCrudController
                 if ($entry->isCurrentlyPresent()) {
                     $workplace = $entry->getCurrentWorkplace();
 
-                    return '<span class="badge bg-success">Present at '.$workplace->name.'</span>';
+                    return '<span class="badge bg-success">Present at ' . $workplace->name . '</span>';
                 }
 
                 return '<span class="badge bg-secondary">Not Present</span>';
