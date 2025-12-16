@@ -25,7 +25,7 @@ class PresenceEventCrudController extends CrudController
     public function setup()
     {
         CRUD::setModel(\App\Models\PresenceEvent::class);
-        CRUD::setRoute(config('backpack.base.route_prefix').'/presence-event');
+        CRUD::setRoute(config('backpack.base.route_prefix') . '/presence-event');
         CRUD::setEntityNameStrings('presence event', 'presence events');
 
         // Read-only: disable create, update, and delete
@@ -53,11 +53,11 @@ class PresenceEventCrudController extends CrudController
                 $badge = $entry->event_type === 'check_in' ? 'bg-success' : 'bg-info';
                 $text = ucfirst(str_replace('_', ' ', $entry->event_type));
 
-                return '<span class="badge '.$badge.'">'.$text.'</span>';
+                return '<span class="badge ' . $badge . '">' . $text . '</span>';
             })
             ->escaped(false);
 
-        CRUD::column('event_time')->label('Time')->type('datetime')->format('Y-m-d H:i:s');
+        CRUD::column('event_time')->label('Time')->type('datetime')->format('Y-MM-DD HH:mm:ss');
 
         CRUD::column('method')
             ->label('Method')
@@ -65,7 +65,7 @@ class PresenceEventCrudController extends CrudController
             ->function(function ($entry) {
                 $badge = $entry->method === 'auto' ? 'bg-primary' : 'bg-secondary';
 
-                return '<span class="badge '.$badge.'">'.ucfirst($entry->method).'</span>';
+                return '<span class="badge ' . $badge . '">' . ucfirst($entry->method) . '</span>';
             })
             ->escaped(false);
 
@@ -80,7 +80,7 @@ class PresenceEventCrudController extends CrudController
                 $hours = floor($duration / 60);
                 $minutes = $duration % 60;
 
-                return $hours.'h '.$minutes.'m';
+                return $hours . 'h ' . $minutes . 'm';
             });
 
         CRUD::column('pair_event')
@@ -88,7 +88,7 @@ class PresenceEventCrudController extends CrudController
             ->type('closure')
             ->function(function ($entry) {
                 if ($entry->pair_event_id) {
-                    return '<a href="'.backpack_url('presence-event/'.$entry->pair_event_id.'/show').'" class="badge bg-warning">View Paired</a>';
+                    return '<a href="' . backpack_url('presence-event/' . $entry->pair_event_id . '/show') . '" class="badge bg-warning">View Paired</a>';
                 }
 
                 return '-';
@@ -163,7 +163,7 @@ class PresenceEventCrudController extends CrudController
 
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="presence-events-'.date('Y-m-d-His').'.csv"',
+            'Content-Disposition' => 'attachment; filename="presence-events-' . date('Y-m-d-His') . '.csv"',
         ];
 
         $callback = function () use ($entries) {
