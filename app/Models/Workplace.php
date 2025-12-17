@@ -24,6 +24,10 @@ class Workplace extends Model
      */
     protected $fillable = [
         'name',
+        'city',
+        'county',
+        'street_address',
+        'country',
         'location_map',
         'latitude',
         'longitude',

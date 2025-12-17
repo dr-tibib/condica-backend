@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Requests\WorkplaceRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\Widget;
 
 /**
  * Class WorkplaceCrudController
@@ -77,12 +78,18 @@ class WorkplaceCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::setValidation(WorkplaceRequest::class);
+        Widget::add()->type('script')->content('assets/js/admin/workplace_map.js');
 
         CRUD::field('name')
             ->label('Workplace Name')
             ->type('text')
             ->attributes(['placeholder' => 'e.g. Main Office, Branch 1'])
             ->hint('A descriptive name for this workplace location');
+
+        CRUD::field('street_address')->label('Street Address')->type('text');
+        CRUD::field('city')->label('City')->type('text')->wrapper(['class' => 'form-group col-md-6']);
+        CRUD::field('county')->label('County')->type('text')->wrapper(['class' => 'form-group col-md-6']);
+        CRUD::field('country')->label('Country')->type('text');
 
         CRUD::field('location_map')
             ->label('Location')

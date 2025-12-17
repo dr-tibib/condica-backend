@@ -321,6 +321,21 @@ it('returns todays sessions with total minutes', function () {
 
     expect($response->json('total_minutes'))->toBe(180); // 3 hours
     expect(count($response->json('sessions')))->toBe(2);
+
+    // Weekly stats
+    $targetMinutes = now()->dayOfWeekIso * 480;
+    // This week we have 3 hours (180 mins). If it's Monday (target 480), we are behind (-300).
+    // If we pretend we had 48 hours worked this week... let's trust the logic.
+    // For this test, we only added events for today (180 mins).
+    // So for any day of week, 180 is likely < target (min 480).
+    // Unless we are on Monday and we change the test to have 9 hours worked.
+    // Let's just check structure.
+    $response->assertJsonStructure([
+        'this_week' => [
+            'total_minutes',
+            'on_track',
+        ]
+    ]);
 });
 
 it('returns ongoing session in todays data', function () {
@@ -355,6 +370,46 @@ it('returns empty sessions when no events today', function () {
             'total_minutes' => 0,
             'sessions' => [],
         ]);
+});
+
+it('calculates weekly stats correctly', function () {
+    // Monday: 9 hours (540 mins) -> Target 480 (8h). Should be on_track (within +/- 60 of target) or over_time?
+    // 540 > 480 + 60 (540) is false. 540 < 480 - 60 (420) is false. So 'on_track'.
+
+    // Let's mock time to be Monday end of day
+    $monday = now()->startOfWeek();
+    $this->travelTo($monday->copy()->setTime(23, 0, 0));
+
+    // Create 9 hours of work today (Monday)
+    $checkIn = PresenceEvent::factory()->create([
+        'user_id' => $this->user->id,
+        'workplace_id' => $this->workplace->id,
+        'event_type' => 'check_in',
+        'event_time' => $monday->copy()->setTime(9, 0, 0),
+    ]);
+    PresenceEvent::factory()->create([
+        'user_id' => $this->user->id,
+        'workplace_id' => $this->workplace->id,
+        'event_type' => 'check_out',
+        'event_time' => $monday->copy()->setTime(18, 0, 0),
+        'pair_event_id' => $checkIn->id,
+    ]);
+
+    $response = $this->withToken($this->token)->getJson('/api/presence/today');
+
+    $response->assertSuccessful();
+    expect($response->json('this_week.total_minutes'))->toBe(540);
+    // Target 480. 540 is within 480+60.
+    expect($response->json('this_week.on_track'))->toBe('on_track');
+
+    // Case: Behind schedule
+    // Tuesday. Target 2 days * 480 = 960.
+    // We only have the 540 from Monday.
+    $this->travelTo($monday->copy()->addDay()->setTime(23, 0, 0));
+
+    $response = $this->withToken($this->token)->getJson('/api/presence/today');
+    // 540 < 960 - 60 (900). Should be behind.
+    expect($response->json('this_week.on_track'))->toBe('behind_schedule');
 });
 
 it('requires authentication to get today', function () {

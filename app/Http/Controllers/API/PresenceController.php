@@ -137,10 +137,27 @@ class PresenceController extends Controller
             ];
         }
 
+        // Calculate weekly stats
+        // Target: 8 hours (480 mins) per day * number of days passed in week (inclusive)
+        $dayOfWeek = now()->dayOfWeekIso; // 1 (Mon) to 7 (Sun)
+        $targetMinutes = $dayOfWeek * 480;
+        $weeklyMinutes = $user->getWeekMinutes();
+
+        $onTrack = 'on_track';
+        if ($weeklyMinutes > $targetMinutes + 60) {
+            $onTrack = 'over_time';
+        } elseif ($weeklyMinutes < $targetMinutes - 60) {
+            $onTrack = 'behind_schedule';
+        }
+
         return response()->json([
             'date' => today()->toDateString(),
             'total_minutes' => $totalMinutes,
             'sessions' => $sessions,
+            'this_week' => [
+                'total_minutes' => $weeklyMinutes,
+                'on_track' => $onTrack,
+            ],
         ], 200);
     }
 }

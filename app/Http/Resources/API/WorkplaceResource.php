@@ -19,6 +19,10 @@ class WorkplaceResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'city' => $this->city,
+            'county' => $this->county,
+            'street_address' => $this->street_address,
+            'country' => $this->country,
             'location' => [
                 'latitude' => $this->latitude,
                 'longitude' => $this->longitude,
@@ -27,7 +31,7 @@ class WorkplaceResource extends JsonResource
             'timezone' => $this->timezone,
             'wifi_ssid' => $this->wifi_ssid,
             'is_active' => $this->is_active,
-            'distance' => $this->when(isset($this->distance), fn () => round($this->distance, 2)),
+            'distance' => $this->when(isset($this->distance), fn() => round($this->distance, 2)),
         ];
     }
 }

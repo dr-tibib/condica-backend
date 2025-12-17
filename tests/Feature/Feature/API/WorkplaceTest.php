@@ -30,7 +30,7 @@ it('returns workplaces with distance when location provided', function () {
     $response->assertSuccessful()
         ->assertJsonStructure([
             'data' => [
-                '*' => ['id', 'name', 'location', 'distance'],
+                '*' => ['id', 'name', 'city', 'county', 'street_address', 'country', 'location', 'distance'],
             ],
         ]);
 

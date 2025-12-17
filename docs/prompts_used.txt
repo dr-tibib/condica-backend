@@ -133,3 +133,29 @@ Request validation classes:
 All responses as JSON with proper HTTP status codes.
 Ensure tenant context is maintained throughout based on domain.
 Use industry standard best practices.
+
+
+Create Backpack CRUD controllers for admin panel:
+
+1. **WorkplaceCrudController:**
+   - CRUD operations: List, Create, Update, Delete
+   - Fields: name, latitude/longitude (map field), radius (slider), timezone, wifi_ssid, is_active
+   - Show currently present employees count
+   - Validation rules for geofence setup
+
+2. **PresenceEventCrudController:**
+   - READ-ONLY list of all presence events
+   - Columns: user name, workplace, event_type, event_time, method
+   - Filters: user, workplace, event_type, date range, method
+   - Show paired events (link check-out to its check-in)
+   - Export to CSV functionality
+   - Calculate and show session durations
+
+3. **UserCrudController (extend existing):**
+   - Add workplace assignment field (default_workplace_id)
+   - Add custom column showing current presence status
+   - Add button to view user's presence history
+
+Include proper field types, validation, and filters for each CRUD panel.
+
+
