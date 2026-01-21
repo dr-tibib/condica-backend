@@ -1,3 +1,5 @@
+[← Back to Documentation Index](./README.md)
+
 # API Documentation
 
 This document provides details on the API endpoints available for the frontend application.
