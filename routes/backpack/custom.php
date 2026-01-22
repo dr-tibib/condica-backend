@@ -18,6 +18,7 @@ Route::group([
 ], function () { // custom admin routes
     Route::crud('tenant', 'TenantCrudController');
     Route::crud('workplace', 'WorkplaceCrudController');
+    Route::crud('department', 'DepartmentCrudController');
     Route::crud('presence-event', 'PresenceEventCrudController');
     Route::get('presence-event/export', 'PresenceEventCrudController@export');
 }); // this should be the absolute last line of this file

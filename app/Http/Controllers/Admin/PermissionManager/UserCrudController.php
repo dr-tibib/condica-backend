@@ -13,13 +13,13 @@ class UserCrudController extends BaseUserCrudController
 {
     private bool $isCentralTenant = false;
 
-    public function setup()
+    public function setup(): void
     {
         $this->isCentralTenant = tenancy()->tenant === null;
         parent::setup();
     }
 
-    public function setupListOperation()
+    public function setupListOperation(): void
     {
         parent::setupListOperation();
 
@@ -57,7 +57,7 @@ class UserCrudController extends BaseUserCrudController
         }
     }
 
-    public function setupCreateOperation()
+    public function setupCreateOperation(): void
     {
         parent::setupCreateOperation();
 
@@ -82,8 +82,49 @@ class UserCrudController extends BaseUserCrudController
             $this->crud->addField([
                 'name' => 'department',
                 'label' => 'Department',
+                'type' => 'relationship',
+                'entity' => 'department',
+                'attribute' => 'name',
+                'model' => \App\Models\Department::class,
+                'tab' => 'Workplace',
+            ]);
+
+            $this->crud->addField([
+                'name' => 'workplace_enter_code',
+                'label' => 'Workplace Enter Code',
                 'type' => 'text',
                 'tab' => 'Workplace',
+            ]);
+
+            // Romanian Legal Fields
+            $this->crud->addField([
+                'name' => 'address',
+                'label' => 'Address',
+                'type' => 'textarea',
+                'tab' => 'Legal Details',
+            ]);
+
+            $this->crud->addField([
+                'name' => 'id_document_type',
+                'label' => 'ID Document Type',
+                'type' => 'select_from_array',
+                'options' => ['CI' => 'CI', 'BI' => 'BI', 'Pasaport' => 'Pasaport'],
+                'allows_null' => true,
+                'tab' => 'Legal Details',
+            ]);
+
+            $this->crud->addField([
+                'name' => 'id_document_number',
+                'label' => 'ID Document Number',
+                'type' => 'text',
+                'tab' => 'Legal Details',
+            ]);
+
+            $this->crud->addField([
+                'name' => 'personal_numeric_code',
+                'label' => 'Personal Numeric Code (CNP)',
+                'type' => 'text',
+                'tab' => 'Legal Details',
             ]);
 
             $this->crud->addField([
@@ -96,7 +137,7 @@ class UserCrudController extends BaseUserCrudController
         }
     }
 
-    public function setupUpdateOperation()
+    public function setupUpdateOperation(): void
     {
         $this->setupCreateOperation();
     }
