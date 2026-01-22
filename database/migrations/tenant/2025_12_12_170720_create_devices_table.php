@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('devices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('device_token')->unique();
+            $table->string('device_token');
             $table->string('device_name')->nullable();
             $table->enum('platform', ['ios', 'android']);
             $table->string('app_version')->nullable();
@@ -26,6 +26,7 @@ return new class extends Migration
             $table->index('user_id');
             $table->index('last_active_at');
             $table->index(['user_id', 'platform']);
+            $table->unique(['user_id', 'device_token']);
         });
     }
 
