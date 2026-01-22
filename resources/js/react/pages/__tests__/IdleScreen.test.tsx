@@ -13,9 +13,21 @@ vi.mock('react-router-dom', async () => {
     };
 });
 
+declare global {
+  interface Window {
+    tenant: any;
+  }
+}
 
 describe('IdleScreen', () => {
-  it('renders the welcome message and buttons', () => {
+  const originalTenant = window.tenant;
+
+  afterEach(() => {
+    window.tenant = originalTenant;
+  });
+
+  it('renders the welcome message and buttons with default name', () => {
+    delete window.tenant;
     render(
       <MemoryRouter>
         <IdleScreen />
@@ -25,6 +37,17 @@ describe('IdleScreen', () => {
     expect(screen.getByText('Welcome to Acme Corp HQ')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Tap to Enter Your Code/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Delegation/i })).toBeInTheDocument();
+  });
+
+  it('renders the welcome message with tenant company name', () => {
+    window.tenant = { company_name: 'Dynamic Corp' };
+    render(
+      <MemoryRouter>
+        <IdleScreen />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Welcome to Dynamic Corp')).toBeInTheDocument();
   });
 
     it('navigates to the code entry screen with the correct flow when the primary button is clicked', () => {
