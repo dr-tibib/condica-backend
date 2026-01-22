@@ -33,6 +33,12 @@ class User extends Authenticatable implements Syncable
         'employee_id',
         'department',
         'role',
+        'address',
+        'id_document_type',
+        'id_document_number',
+        'personal_numeric_code',
+        'workplace_enter_code',
+        'department_id',
     ];
 
     /**
@@ -141,6 +147,11 @@ class User extends Authenticatable implements Syncable
     public function defaultWorkplace(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Workplace::class, 'default_workplace_id');
+    }
+
+    public function department(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Department::class);
     }
 
     /**
