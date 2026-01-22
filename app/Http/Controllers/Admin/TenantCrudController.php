@@ -38,6 +38,13 @@ class TenantCrudController extends CrudController
     {
         CRUD::field('id')->label('Tenant ID (Subdomain/Domain ID)')->hint('Unique identifier for the tenant');
         CRUD::field('company_name')->label('Company Name');
+        CRUD::field('logo')
+            ->label('Company Logo')
+            ->type('upload')
+            ->withFiles([
+                'disk' => 'public',
+                'path' => 'tenant_logos',
+            ]);
 
         // Add users relationship field?
         // Usually we assign users to tenants, or tenants to users.

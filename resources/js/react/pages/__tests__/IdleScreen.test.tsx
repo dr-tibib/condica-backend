@@ -22,8 +22,18 @@ declare global {
 describe('IdleScreen', () => {
   const originalTenant = window.tenant;
 
+  beforeEach(() => {
+    // Mock fetch
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({}),
+      })
+    ) as any;
+  });
+
   afterEach(() => {
     window.tenant = originalTenant;
+    vi.restoreAllMocks();
   });
 
   it('renders the welcome message and buttons with default name', () => {
@@ -48,6 +58,22 @@ describe('IdleScreen', () => {
     );
 
     expect(screen.getByText('Welcome to Dynamic Corp')).toBeInTheDocument();
+  });
+
+  it('updates company name from API', async () => {
+    global.fetch = vi.fn(() =>
+        Promise.resolve({
+            json: () => Promise.resolve({ company_name: 'API Corp' }),
+        })
+    ) as any;
+
+    render(
+        <MemoryRouter>
+            <IdleScreen />
+        </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Welcome to API Corp')).toBeInTheDocument();
   });
 
     it('navigates to the code entry screen with the correct flow when the primary button is clicked', () => {

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 
 declare global {
   interface Window {
@@ -11,7 +12,25 @@ declare global {
  */
 const IdleScreen = () => {
   const navigate = useNavigate();
-  const companyName = window.tenant?.company_name || 'Acme Corp HQ';
+  const [companyName, setCompanyName] = useState(window.tenant?.company_name || 'Acme Corp HQ');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.company_name) setCompanyName(data.company_name);
+        if (data.logo_url) setLogoUrl(data.logo_url);
+      })
+      .catch((err) => console.error('Failed to fetch config', err));
+
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const handleRegularFlow = () => {
     navigate('/code-entry', { state: { flow: 'regular' } });
@@ -20,6 +39,16 @@ const IdleScreen = () => {
   const handleDelegationFlow = () => {
     navigate('/code-entry', { state: { flow: 'delegation' } });
   };
+
+  const hours = currentTime.getHours().toString().padStart(2, '0');
+  const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const dayName = days[currentTime.getDay()];
+  const monthName = months[currentTime.getMonth()];
+  const dayNum = currentTime.getDate();
+
+  const dateString = `${hours}:${minutes} ${dayName}, ${monthName} ${dayNum}`;
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-[#111318] dark:text-white font-display antialiased h-screen w-full overflow-hidden flex flex-col">
@@ -32,8 +61,9 @@ const IdleScreen = () => {
             <div
               className="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center shadow-inner bg-cover bg-center"
               style={{
-                backgroundImage:
-                  'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBWTGyXVsBCawokhZtu8ExKPmG4iPl720F4uZ8-geruRKCf1T-E6aGdSA2_FNADQ7hjqNUV7l0zqfWzQeug3aGmr2KcmKiAltxPDoxvkKLOZalLc4Lj7fiCOGD7ueDdecaLy096qa_-tIQ97kuKeto46DEEoIc12WRyTlGaFVviPWIu6mlA0yPnFciPFznRICxIBDCv5chIHqQW7cUdOzgTneKVdF3IR1lcRGJqnHU_CM1_s8tVkkuYL9a2x8qIuTbNM7iAW5BhYTM")',
+                backgroundImage: logoUrl
+                  ? `url("${logoUrl}")`
+                  : 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBWTGyXVsBCawokhZtu8ExKPmG4iPl720F4uZ8-geruRKCf1T-E6aGdSA2_FNADQ7hjqNUV7l0zqfWzQeug3aGmr2KcmKiAltxPDoxvkKLOZalLc4Lj7fiCOGD7ueDdecaLy096qa_-tIQ97kuKeto46DEEoIc12WRyTlGaFVviPWIu6mlA0yPnFciPFznRICxIBDCv5chIHqQW7cUdOzgTneKVdF3IR1lcRGJqnHU_CM1_s8tVkkuYL9a2x8qIuTbNM7iAW5BhYTM")',
               }}
             ></div>
             {/* Welcome Title */}
@@ -72,7 +102,7 @@ const IdleScreen = () => {
           <div className="flex items-center gap-2 opacity-80">
             <span className="material-symbols-outlined text-xl">schedule</span>
             <p className="text-lg md:text-xl font-medium text-center">
-              14:32 Monday, Jan 22
+              {dateString}
             </p>
           </div>
         </div>
