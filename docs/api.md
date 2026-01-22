@@ -375,3 +375,70 @@ Register a device for push notifications.
     }
 }
 ```
+
+---
+
+## Kiosk & Config
+
+### Get Configuration
+
+Get public tenant configuration for the frontend/kiosk.
+
+**Endpoint:** `GET /config`
+**Auth Required:** No
+
+**Response (200 OK):**
+
+```json
+{
+    "company_name": "Acme Corp",
+    "logo_url": "https://example.com/logo.png",
+    "code_length": 3
+}
+```
+
+### Kiosk Code Entry
+
+Submit a kiosk access code to check in, check out, or verify identity.
+
+**Endpoint:** `POST /kiosk/submit-code`
+**Auth Required:** No (Kiosk Mode)
+
+**Request Body:**
+
+```json
+{
+    "code": "123", // Required, length matches configured code_length
+    "flow": "regular", // Optional, 'regular' (default) or 'delegation'
+    "workplace_id": 1, // Optional, Workplace ID for check-in
+    "device_info": {} // Optional
+}
+```
+
+**Response (200 OK) - Check In/Out (Regular Flow):**
+
+```json
+{
+    "message": "Checked in successfully.",
+    "type": "checkin", // 'checkin' or 'checkout'
+    "user": {
+        "name": "John Doe"
+    },
+    "time": "9:00 AM",
+    "event": { ... } // PresenceEvent object
+}
+```
+
+**Response (200 OK) - Verification (Delegation Flow):**
+
+```json
+{
+    "message": "User verified.",
+    "user": {
+        "id": 1,
+        "name": "John Doe",
+        "email": "user@example.com",
+        "default_workplace_id": 1
+    }
+}
+```

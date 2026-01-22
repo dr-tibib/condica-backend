@@ -32,6 +32,7 @@ class TenantCrudController extends CrudController
         CRUD::column('id')->label('Tenant ID');
         // display the number of users
         CRUD::column('users')->type('relationship_count')->label('Users');
+        CRUD::column('company_name')->label('Company Name');
     }
 
     protected function setupCreateOperation()
@@ -45,6 +46,15 @@ class TenantCrudController extends CrudController
                 'disk' => 'public',
                 'path' => 'tenant_logos',
             ]);
+
+        CRUD::field('code_length')
+            ->label('Access Code Length')
+            ->type('number')
+            ->default(3)
+            ->attributes(['min' => 3, 'max' => 10])
+            ->hint('Length of the code used for kiosk entry (default: 3)')
+            ->fake(true)
+            ->store_in('data');
 
         // Add users relationship field?
         // Usually we assign users to tenants, or tenants to users.

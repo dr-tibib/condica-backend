@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\API\ConfigController;
+use App\Http\Controllers\API\KioskController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -26,11 +28,17 @@ Route::middleware([
     Route::get('/', function () {
         return view('welcome', ['tenant' => tenant()]);
     });
+});
 
-    Route::get('/api/config', function () {
-        return response()->json([
-            'company_name' => tenant()->company_name,
-            'logo_url' => tenant()->logo ? \Illuminate\Support\Facades\Storage::disk('public')->url(tenant()->logo) : null,
-        ]);
+Route::middleware([
+    'api',
+    InitializeTenancyByDomain::class,
+    PreventAccessFromCentralDomains::class,
+])->prefix('api')->group(function () {
+    Route::get('/config', [ConfigController::class, 'index']);
+
+    Route::prefix('kiosk')->group(function () {
+        Route::post('/submit-code', [KioskController::class, 'submitCode']);
+        Route::post('/delegation', [KioskController::class, 'startDelegation']);
     });
 });

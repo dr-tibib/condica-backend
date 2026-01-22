@@ -1,8 +1,7 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import CodeEntryScreen from '../CodeEntryScreen';
-import { vi } from 'vitest';
-import * as api from '../../services/api';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 const mockedNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -10,12 +9,35 @@ vi.mock('react-router-dom', async () => {
     return {
         ...actual,
         useNavigate: () => mockedNavigate,
+        useLocation: () => ({ state: { flow: 'regular' } }),
     };
 });
 
 describe('CodeEntryScreen', () => {
-    it.skip('calls validateCode and navigates on successful code entry', async () => {
-        const mockedValidateCode = vi.spyOn(api, 'validateCode').mockResolvedValue({ data: { has_delegation_permission: false, current_state: 'checked_in', full_name: 'John Doe' } });
+    beforeEach(() => {
+        global.fetch = vi.fn();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('fetches code length and submits code correctly', async () => {
+        // Mock Config response
+        (global.fetch as any)
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ code_length: 4 }),
+            })
+            // Mock Submit Code response
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    type: 'checkin',
+                    user: { name: 'John Doe' },
+                    time: '9:00 AM'
+                }),
+            });
 
         render(
             <MemoryRouter>
@@ -23,17 +45,31 @@ describe('CodeEntryScreen', () => {
             </MemoryRouter>
         );
 
-        for (let i = 1; i <= 6; i++) {
-            fireEvent.click(screen.getByText(i.toString()));
-        }
-        console.log('Buttons clicked');
+        // Wait for config fetch
+        await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/config'));
 
-        await vi.waitFor(() => {
-            expect(mockedValidateCode).toHaveBeenCalledWith('123456');
+        // Enter 4 digits (as mocked config returns 4)
+        fireEvent.click(screen.getByText('1'));
+        fireEvent.click(screen.getByText('2'));
+        fireEvent.click(screen.getByText('3'));
+        fireEvent.click(screen.getByText('4'));
+
+        // Verify submit code call
+        await waitFor(() => {
+            expect(global.fetch).toHaveBeenCalledWith('/api/kiosk/submit-code', expect.objectContaining({
+                method: 'POST',
+                body: expect.stringContaining('"code":"1234"'),
+            }));
         });
 
-        await vi.waitFor(() => {
-            expect(mockedNavigate).toHaveBeenCalledWith('/success', { state: { type: 'checked_in', name: 'John Doe' } });
+        // Verify navigation
+        await waitFor(() => {
+            expect(mockedNavigate).toHaveBeenCalledWith('/success', expect.objectContaining({
+                state: expect.objectContaining({
+                    name: 'John Doe',
+                    type: 'checkin'
+                })
+            }));
         });
     });
 });
