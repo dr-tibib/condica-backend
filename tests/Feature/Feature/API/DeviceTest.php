@@ -148,6 +148,9 @@ it('allows same token for different users', function () {
     ]);
     $response1->assertCreated();
 
+    // Clear auth guards to ensure new token is used
+    Illuminate\Support\Facades\Auth::forgetGuards();
+
     // User 2 registers device with same token
     $response2 = $this->withToken($anotherToken)->postJson('/api/devices/register', [
         'device_token' => 'shared-token',

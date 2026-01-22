@@ -343,7 +343,7 @@ it('returns ongoing session in todays data', function () {
         'user_id' => $this->user->id,
         'workplace_id' => $this->workplace->id,
         'event_type' => 'check_in',
-        'event_time' => today()->addHours(9),
+        'event_time' => now()->subHours(1),
     ]);
 
     $response = $this->withToken($this->token)->getJson('/api/presence/today');
