@@ -37,6 +37,8 @@ class TenantCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::field('id')->label('Tenant ID (Subdomain/Domain ID)')->hint('Unique identifier for the tenant');
+        CRUD::field('company_name')->label('Company Name');
+
         // Add users relationship field?
         // Usually we assign users to tenants, or tenants to users.
         // Let's add a select2_multiple field for users

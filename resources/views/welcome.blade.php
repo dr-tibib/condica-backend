@@ -11,6 +11,11 @@
 </head>
 <body>
     <div id="root"></div>
+    <script>
+        window.tenant = @json([
+            'company_name' => isset($tenant) ? $tenant->company_name : null,
+        ]);
+    </script>
     @viteReactRefresh
     @vite('resources/js/react/main.tsx')
 </body>

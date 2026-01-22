@@ -1,10 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 
+declare global {
+  interface Window {
+    tenant: any;
+  }
+}
+
 /**
  * Implements the design from docs/design/idle_screen
  */
 const IdleScreen = () => {
   const navigate = useNavigate();
+  const companyName = window.tenant?.company_name || 'Acme Corp HQ';
 
   const handleRegularFlow = () => {
     navigate('/code-entry', { state: { flow: 'regular' } });
@@ -31,7 +38,7 @@ const IdleScreen = () => {
             ></div>
             {/* Welcome Title */}
             <h1 className="text-3xl md:text-[32px] font-bold leading-tight tracking-tight text-center text-[#111318] dark:text-white">
-              Welcome to Acme Corp HQ
+              Welcome to {companyName}
             </h1>
           </div>
         </div>
