@@ -133,4 +133,14 @@ describe('IdleScreen', () => {
         const logo = await screen.findByAltText('Company Logo');
         expect(logo).toHaveAttribute('src', customLogoUrl);
     });
+
+  it('renders the language switcher', () => {
+    render(
+      <MemoryRouter>
+        <IdleScreen />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByLabelText('Change Language')).toBeInTheDocument();
+  });
 });
