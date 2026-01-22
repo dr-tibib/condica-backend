@@ -26,4 +26,11 @@ Route::middleware([
     Route::get('/', function () {
         return view('welcome', ['tenant' => tenant()]);
     });
+
+    Route::get('/api/config', function () {
+        return response()->json([
+            'company_name' => tenant()->company_name,
+            'logo_url' => tenant()->logo ? \Illuminate\Support\Facades\Storage::disk('public')->url(tenant()->logo) : null,
+        ]);
+    });
 });
