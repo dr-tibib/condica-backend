@@ -101,4 +101,36 @@ describe('IdleScreen', () => {
 
         expect(mockedNavigate).toHaveBeenCalledWith('/code-entry', { state: { flow: 'delegation' } });
     });
+
+    it('renders the default logo when no custom logo is provided', () => {
+        delete window.tenant;
+        render(
+            <MemoryRouter>
+                <IdleScreen />
+            </MemoryRouter>
+        );
+
+        const logo = screen.getByAltText('Company Logo');
+        expect(logo).toBeInTheDocument();
+        expect(logo).toHaveAttribute('src', '/images/oak_soft_logo.svg');
+        expect(logo).toHaveClass('h-20');
+    });
+
+    it('renders the custom logo when provided via API', async () => {
+        const customLogoUrl = 'https://example.com/logo.png';
+        global.fetch = vi.fn(() =>
+            Promise.resolve({
+                json: () => Promise.resolve({ logo_url: customLogoUrl }),
+            })
+        ) as any;
+
+        render(
+            <MemoryRouter>
+                <IdleScreen />
+            </MemoryRouter>
+        );
+
+        const logo = await screen.findByAltText('Company Logo');
+        expect(logo).toHaveAttribute('src', customLogoUrl);
+    });
 });

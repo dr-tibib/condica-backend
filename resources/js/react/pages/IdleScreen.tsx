@@ -58,14 +58,11 @@ const IdleScreen = () => {
         <div className="flex-1 flex flex-col justify-end items-center w-full pb-10">
           <div className="flex flex-col items-center gap-6">
             {/* Logo Placeholder */}
-            <div
-              className="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center shadow-inner bg-cover bg-center"
-              style={{
-                backgroundImage: logoUrl
-                  ? `url("${logoUrl}")`
-                  : 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBWTGyXVsBCawokhZtu8ExKPmG4iPl720F4uZ8-geruRKCf1T-E6aGdSA2_FNADQ7hjqNUV7l0zqfWzQeug3aGmr2KcmKiAltxPDoxvkKLOZalLc4Lj7fiCOGD7ueDdecaLy096qa_-tIQ97kuKeto46DEEoIc12WRyTlGaFVviPWIu6mlA0yPnFciPFznRICxIBDCv5chIHqQW7cUdOzgTneKVdF3IR1lcRGJqnHU_CM1_s8tVkkuYL9a2x8qIuTbNM7iAW5BhYTM")',
-              }}
-            ></div>
+            <img
+              src={logoUrl || '/images/oak_soft_logo.svg'}
+              alt="Company Logo"
+              className="h-20 w-auto object-contain"
+            />
             {/* Welcome Title */}
             <h1 className="text-3xl md:text-[32px] font-bold leading-tight tracking-tight text-center text-[#111318] dark:text-white">
               Welcome to {companyName}
