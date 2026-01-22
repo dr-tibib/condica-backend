@@ -1,17 +1,57 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
 const ConfirmLocationScreen = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { location: selectedLocation } = location.state || {};
+    const { location: selectedLocation, user } = location.state || {};
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleBack = () => {
         navigate(-1);
     };
 
-    const handleStartDelegation = () => {
-        console.log('Starting delegation at:', selectedLocation);
-        navigate('/success');
+    const handleStartDelegation = async () => {
+        if (!user || !selectedLocation) {
+             console.error('Missing user or location data');
+             return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const response = await fetch('/api/kiosk/delegation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: user.id,
+                    workplace_id: selectedLocation.id
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Delegation failed');
+            }
+
+           navigate('/success', {
+               state: {
+                   type: data.type,
+                   name: data.user.name,
+                   time: data.time
+               }
+            });
+
+        } catch (error) {
+            console.error(error);
+            // Ideally show error to user
+        } finally {
+            setIsLoading(false);
+        }
     };
 
   return (
@@ -80,7 +120,7 @@ const ConfirmLocationScreen = () => {
               </div>
               <div className="flex flex-col">
                 <p className="text-[#111318] dark:text-white text-base font-medium leading-normal group-hover:text-primary transition-colors">Save for future use</p>
-                <p className="text-[#616e89] dark:text-[#94a3b8] text-sm font-normal">Remember this location for your next check-in</p>
+                <p className="text-[#616e89] dark:text-gray-400 text-sm font-normal">Remember this location for your next check-in</p>
               </div>
             </label>
           </div>
@@ -88,10 +128,14 @@ const ConfirmLocationScreen = () => {
       </div>
       <div className="w-full bg-white dark:bg-[#1a202c] border-t border-[#dbdee6] dark:border-[#2e3440] px-6 py-6 sm:px-12 flex justify-center mt-auto z-10">
         <div className="w-full max-w-[600px] flex flex-col sm:flex-row gap-4">
-          <button onClick={handleStartDelegation} className="flex-1 min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-6 bg-primary hover:bg-blue-700 dark:hover:bg-blue-600 text-white text-lg font-bold leading-normal tracking-[0.015em] transition-all shadow-md active:scale-[0.98]">
-            Start Delegation
+          <button
+            onClick={handleStartDelegation}
+            disabled={isLoading}
+            className="flex-1 min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-6 bg-primary hover:bg-blue-700 dark:hover:bg-blue-600 text-white text-lg font-bold leading-normal tracking-[0.015em] transition-all shadow-md active:scale-[0.98] disabled:opacity-70"
+          >
+            {isLoading ? 'Processing...' : 'Start Delegation'}
           </button>
-          <button onClick={handleBack} className="sm:flex-none sm:w-auto flex-1 min-w-[100px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-6 bg-transparent hover:bg-background-light dark:hover:bg-[#2d3748] text-[#616e89] dark:text-[#94a3b8] text-base font-medium leading-normal tracking-[0.015em] transition-all border border-transparent hover:border-[#dbdee6] dark:hover:border-[#4a5568]">
+          <button onClick={handleBack} disabled={isLoading} className="sm:flex-none sm:w-auto flex-1 min-w-[100px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 px-6 bg-transparent hover:bg-background-light dark:hover:bg-[#2d3748] text-[#616e89] dark:text-[#94a3b8] text-base font-medium leading-normal tracking-[0.015em] transition-all border border-transparent hover:border-[#dbdee6] dark:hover:border-[#4a5568]">
             Cancel
           </button>
         </div>

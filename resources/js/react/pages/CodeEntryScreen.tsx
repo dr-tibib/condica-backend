@@ -3,28 +3,90 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 const CodeEntryScreen = () => {
   const [code, setCode] = useState('');
+  const [codeLength, setCodeLength] = useState(3);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { flow } = location.state || { flow: 'regular' };
 
   useEffect(() => {
-    if (code.length === 6) {
-      // Auto-submit on 6 digits
-      console.log(`Submitting code: ${code} for flow: ${flow}`);
-      // Here you would typically make an API call
-      // For now, we'll just navigate to the success screen
-      navigate('/success');
+    // Fetch config to get code length
+    fetch('/api/config')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.code_length) {
+            setCodeLength(data.code_length);
+        }
+      })
+      .catch((err) => console.error('Failed to fetch config', err));
+  }, []);
+
+  useEffect(() => {
+    if (code.length === codeLength) {
+      // Auto-submit on correct length
+      submitCode(code);
     }
-  }, [code, flow, navigate]);
+  }, [code, codeLength]);
+
+  const submitCode = async (submittedCode: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+        const response = await fetch('/api/kiosk/submit-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                code: submittedCode,
+                flow: flow,
+                // In a real kiosk app, workplace_id might come from local storage or config
+                // workplace_id: 1
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Invalid code');
+        }
+
+        if (flow === 'regular') {
+            navigate('/success', {
+                state: {
+                    type: data.type, // 'checkin' or 'checkout'
+                    name: data.user.name,
+                    time: data.time
+                }
+            });
+        } else if (flow === 'delegation') {
+            // Pass user info to the next screen
+            navigate('/delegation-locations', { state: { user: data.user } });
+        }
+
+    } catch (err: any) {
+        console.error(err);
+        setError(err.message);
+        setCode(''); // Clear code on error
+    } finally {
+        setIsLoading(false);
+    }
+  };
 
   const handleKeyPress = (key: string) => {
-    if (code.length < 6) {
+    if (code.length < codeLength && !isLoading) {
       setCode(code + key);
     }
   };
 
   const handleDelete = () => {
-    setCode(code.slice(0, -1));
+    if (!isLoading) {
+        setCode(code.slice(0, -1));
+        setError(null);
+    }
   };
 
   const handleBack = () => {
@@ -53,12 +115,19 @@ const CodeEntryScreen = () => {
               Enter Your Employee Code
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-lg font-medium text-center max-w-sm">
-              Enter your 6-digit access PIN
+              Enter your {codeLength}-digit access PIN
             </p>
           </div>
+
+          {error && (
+              <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-center font-medium">
+                  {error}
+              </div>
+          )}
+
           <div className="mb-14 flex items-center justify-center">
             <div className="flex items-center justify-center gap-4 md:gap-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 px-8 py-5 h-[80px] w-auto min-w-[320px] md:min-w-[400px] shadow-sm">
-              {[...Array(6)].map((_, i) => (
+              {[...Array(codeLength)].map((_, i) => (
                 <div
                   key={i}
                   className={`w-4 h-4 md:w-5 md:h-5 rounded-full transition-all duration-300 ${
@@ -75,7 +144,8 @@ const CodeEntryScreen = () => {
               <button
                 key={i + 1}
                 onClick={() => handleKeyPress((i + 1).toString())}
-                className="group relative w-full aspect-square max-w-[100px] max-h-[100px] mx-auto flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 border-b-4 border-slate-200 dark:border-slate-900 active:border-b-0 active:translate-y-1 transition-all duration-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                disabled={isLoading}
+                className="group relative w-full aspect-square max-w-[100px] max-h-[100px] mx-auto flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 border-b-4 border-slate-200 dark:border-slate-900 active:border-b-0 active:translate-y-1 transition-all duration-100 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="text-3xl md:text-4xl font-semibold text-slate-800 dark:text-white group-hover:scale-110 transition-transform">
                   {i + 1}
@@ -85,7 +155,8 @@ const CodeEntryScreen = () => {
             <div className="w-full max-w-[100px] mx-auto"></div>
             <button
               onClick={() => handleKeyPress('0')}
-              className="group relative w-full aspect-square max-w-[100px] max-h-[100px] mx-auto flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 border-b-4 border-slate-200 dark:border-slate-900 active:border-b-0 active:translate-y-1 transition-all duration-100 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              disabled={isLoading}
+              className="group relative w-full aspect-square max-w-[100px] max-h-[100px] mx-auto flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 border-b-4 border-slate-200 dark:border-slate-900 active:border-b-0 active:translate-y-1 transition-all duration-100 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="text-3xl md:text-4xl font-semibold text-slate-800 dark:text-white group-hover:scale-110 transition-transform">
                 0
@@ -93,7 +164,8 @@ const CodeEntryScreen = () => {
             </button>
             <button
               onClick={handleDelete}
-              className="group relative w-full aspect-square max-w-[100px] max-h-[100px] mx-auto flex items-center justify-center rounded-2xl hover:bg-red-50 dark:hover:bg-red-900/10 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-red-200"
+              disabled={isLoading}
+              className="group relative w-full aspect-square max-w-[100px] max-h-[100px] mx-auto flex items-center justify-center rounded-2xl hover:bg-red-50 dark:hover:bg-red-900/10 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined text-[40px] group-active:scale-90 transition-transform">
                 backspace
