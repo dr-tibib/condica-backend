@@ -1,3 +1,13 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2463eb;
+  --color-background-light: #f6f6f8;
+  --color-background-dark: #111621;
+
+  --font-display: "Inter", sans-serif;
+
+  --radius: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+}

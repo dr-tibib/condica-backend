@@ -1,5 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * Implements the design from docs/design/idle_screen
+ */
 const IdleScreen = () => {
   const navigate = useNavigate();
 
