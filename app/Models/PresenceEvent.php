@@ -46,6 +46,10 @@ class PresenceEvent extends Model
     {
         return [
             'event_time' => 'datetime',
+            'device_info' => 'array',
+            'latitude' => 'decimal:8',
+            'longitude' => 'decimal:8',
+            'accuracy' => 'integer',
         ];
     }
 
@@ -78,7 +82,7 @@ class PresenceEvent extends Model
      */
     public function scopeCheckIns(Builder $query): void
     {
-        $query->where('event_type', 'check_in');
+        $query->whereIn('event_type', ['check_in', 'delegation_start']);
     }
 
     /**
@@ -86,7 +90,7 @@ class PresenceEvent extends Model
      */
     public function scopeCheckOuts(Builder $query): void
     {
-        $query->where('event_type', 'check_out');
+        $query->whereIn('event_type', ['check_out', 'delegation_end']);
     }
 
     /**
@@ -134,7 +138,7 @@ class PresenceEvent extends Model
      */
     public function isCheckIn(): bool
     {
-        return $this->event_type === 'check_in';
+        return in_array($this->event_type, ['check_in', 'delegation_start']);
     }
 
     /**
@@ -142,7 +146,17 @@ class PresenceEvent extends Model
      */
     public function isCheckOut(): bool
     {
-        return $this->event_type === 'check_out';
+        return in_array($this->event_type, ['check_out', 'delegation_end']);
+    }
+
+    public function isDelegationStart(): bool
+    {
+        return $this->event_type === 'delegation_start';
+    }
+
+    public function isDelegationEnd(): bool
+    {
+        return $this->event_type === 'delegation_end';
     }
 
     /**

@@ -65,6 +65,11 @@ const CodeEntryScreen = () => {
                 }
             });
         } else if (flow === 'delegation') {
+            if (data.is_delegated) {
+                setError(t('code_entry.already_delegated', 'You are already in a delegation. Please check out first.'));
+                setCode('');
+                return;
+            }
             // Pass user info to the next screen
             navigate('/delegation-locations', { state: { user: data.user } });
         }

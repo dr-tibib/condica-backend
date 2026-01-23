@@ -22,7 +22,7 @@ const ConfirmLocationScreen = () => {
         setIsLoading(true);
 
         try {
-            const response = await fetch('/api/kiosk/delegation', {
+            const response = await fetch('/api/delegations', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -30,7 +30,12 @@ const ConfirmLocationScreen = () => {
                 },
                 body: JSON.stringify({
                     user_id: user.id,
-                    workplace_id: selectedLocation.id
+                    place_id: selectedLocation.place_id,
+                    name: selectedLocation.name,
+                    address: selectedLocation.address,
+                    latitude: selectedLocation.latitude,
+                    longitude: selectedLocation.longitude,
+                    // device_info?
                 })
             });
 

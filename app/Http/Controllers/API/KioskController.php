@@ -45,6 +45,9 @@ class KioskController extends Controller
         }
 
         if ($flow === 'delegation') {
+            $latestEvent = $user->latestPresenceEvent;
+            $isDelegated = $latestEvent && $latestEvent->isDelegationStart();
+
             return response()->json([
                 'message' => 'User verified.',
                 'user' => [
@@ -53,6 +56,8 @@ class KioskController extends Controller
                     'email' => $user->email,
                     'default_workplace_id' => $user->default_workplace_id,
                 ],
+                'is_delegated' => $isDelegated,
+                'current_delegation' => $isDelegated ? $latestEvent : null,
             ]);
         }
 
@@ -107,40 +112,4 @@ class KioskController extends Controller
         }
     }
 
-    /**
-     * Start delegation (check-in at specific location).
-     */
-    public function startDelegation(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'workplace_id' => ['required', 'exists:workplaces,id'],
-            'device_info' => ['nullable', 'array'],
-        ]);
-
-        $user = User::findOrFail($validated['user_id']);
-
-        try {
-            $event = $this->presenceService->checkIn($user, [
-                'workplace_id' => $validated['workplace_id'],
-                'method' => 'kiosk',
-                'device_info' => $validated['device_info'] ?? null,
-                'notes' => 'Delegation Start',
-            ]);
-
-            return response()->json([
-                'message' => 'Delegation started successfully.',
-                'type' => 'delegation-start',
-                'user' => ['name' => $user->name],
-                'time' => $event->event_time->format('g:i A'),
-                'event' => $event,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Kiosk delegation error: ' . $e->getMessage());
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
 }

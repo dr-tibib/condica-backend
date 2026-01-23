@@ -1,29 +1,49 @@
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const DelegationLocationsScreen = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const locationState = useLocation();
+    const user = locationState.state?.user;
+
+    const [savedLocations, setSavedLocations] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (user?.id) {
+            const fetchLocations = async () => {
+                try {
+                    const response = await fetch(`/api/delegations?user_id=${user.id}`);
+                    const data = await response.json();
+                    setSavedLocations(data.data.map((loc: any) => ({
+                        id: loc.place_id,
+                        name: loc.name,
+                        address: loc.address,
+                        icon: 'history',
+                        place_id: loc.place_id,
+                        latitude: loc.latitude,
+                        longitude: loc.longitude,
+                    })));
+                } catch (error) {
+                    console.error(error);
+                }
+            };
+            fetchLocations();
+        }
+    }, [user]);
 
     const handleBack = () => {
         navigate('/code-entry', { state: { flow: 'delegation' } });
     };
 
     const handleSearch = () => {
-        navigate('/search-location');
+        navigate('/search-location', { state: { user } });
     };
 
     const handleSelectLocation = (location: any) => {
-        console.log('Selected location:', location);
-        navigate('/success');
+        navigate('/confirm-location', { state: { location, user } });
     }
-
-    const savedLocations = [
-        { id: 1, name: 'Client Site Downtown', address: '123 Main St.', icon: 'domain' },
-        { id: 2, name: 'Warehouse North', address: 'Industrial Park, Zone B', icon: 'warehouse' },
-        { id: 3, name: 'Home Office', address: 'Remote', icon: 'home', fullWidth: true },
-    ];
-
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-[#111318] dark:text-white overflow-x-hidden">
@@ -43,7 +63,7 @@ const DelegationLocationsScreen = () => {
                 style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBf4dqS5AfEJiGe5aj4wjJE7FkMHqIJ27l6lQDEYVCCofW3mhU0Ic2oyu1zyAkyzQiHksyPLNa2aEaaTvmxh9huEYJRICeteBeywY4qzPvN4fq1iLr89hlWdiZBvlpuvsgsihyu2TMHj7C2ogUGqiKYK5NHwoBhV6YTQ9Qm3H46vYnZCIoCdmfECHydK-JKnvDKcGA8YlHgJNQIiRqMMpMlpZXdtI7WaxyN3MvfjLsJkDnLZ457kcgA_YxekAQDmIbgXiw8JumYUwo")' }}
               ></div>
               <span className="text-sm font-bold text-[#111318] dark:text-white truncate max-w-[120px]">
-                John D.
+                {user?.name || 'User'}
               </span>
             </div>
           </header>
@@ -65,6 +85,7 @@ const DelegationLocationsScreen = () => {
                   className="flex w-full h-full pl-14 pr-4 rounded-xl border-2 border-transparent bg-background-light dark:bg-gray-800 text-[#111318] dark:text-white text-lg placeholder:text-[#616e89] focus:outline-none focus:border-primary focus:ring-0 transition-all shadow-sm"
                   placeholder={t('delegation.search_placeholder')}
                   type="text"
+                  readOnly
                 />
               </label>
             </div>
@@ -73,6 +94,9 @@ const DelegationLocationsScreen = () => {
                 {t('delegation.saved_locations')}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {savedLocations.length === 0 && (
+                    <p className="text-gray-500">{t('delegation.no_saved_locations', 'No recent locations found.')}</p>
+                )}
                 {savedLocations.map(location => (
                     <div
                         key={location.id}
