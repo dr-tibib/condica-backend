@@ -1,9 +1,14 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const ErrorScreen = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
-    const { title = 'Delegation Not Available', message = "You don't have delegation permissions. Contact your supervisor if you need access." } = location.state || {};
+    const {
+        title = t('error.delegation_not_available.title'),
+        message = t('error.delegation_not_available.message')
+    } = location.state || {};
 
     const handleOk = () => {
         navigate('/');
@@ -34,7 +39,7 @@ const ErrorScreen = () => {
               onClick={handleOk}
               className="flex h-12 w-full max-w-[240px] cursor-pointer items-center justify-center rounded-xl bg-primary px-8 text-base font-bold text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
             >
-              <span className="truncate">OK</span>
+              <span className="truncate">{t('common.ok')}</span>
             </button>
           </div>
         </div>

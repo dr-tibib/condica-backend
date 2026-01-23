@@ -1,39 +1,41 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const successTypes = {
   checkin: {
     color: 'success',
     icon: 'check_circle',
-    title: 'Checked In!',
-    message: 'Have a productive day!',
+    titleKey: 'success.checkin.title',
+    messageKey: 'success.checkin.message',
   },
   checkout: {
     color: 'primary',
     icon: 'check',
-    title: 'Checked Out!',
-    message: 'See you tomorrow!',
+    titleKey: 'success.checkout.title',
+    messageKey: 'success.checkout.message',
   },
   'delegation-start': {
     color: 'orange-500',
     icon: 'check',
-    title: 'Delegation Started!',
-    message: "You're all set for today.",
+    titleKey: 'success.delegation_start.title',
+    messageKey: 'success.delegation_start.message',
   },
   'delegation-end': {
     color: 'success',
     icon: 'check',
-    title: 'Delegation Ended!',
-    message: 'Welcome back!',
+    titleKey: 'success.delegation_end.title',
+    messageKey: 'success.delegation_end.message',
   },
 };
 
 const SuccessScreen = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { type = 'checkin', name = 'John Davidson', time = '8:32 AM' } = location.state || {};
 
-  const { color, icon, title, message } = successTypes[type as keyof typeof successTypes] || successTypes.checkin;
+  const { color, icon, titleKey, messageKey } = successTypes[type as keyof typeof successTypes] || successTypes.checkin;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -59,7 +61,7 @@ const SuccessScreen = () => {
           </div>
           <div className="text-center space-y-4 max-w-lg mx-auto">
             <h1 className="text-[#111318] dark:text-white tracking-tight text-4xl md:text-[48px] font-bold leading-tight pb-2">
-              {title}
+              {t(titleKey)}
             </h1>
             <h2 className="text-primary text-2xl md:text-[32px] font-bold leading-tight tracking-[-0.015em]">
               {name}
@@ -68,7 +70,7 @@ const SuccessScreen = () => {
               {time}
             </p>
             <p className="text-slate-600 dark:text-slate-300 text-lg md:text-xl font-normal leading-normal pt-4">
-              {message}
+              {t(messageKey)}
             </p>
           </div>
         </div>
@@ -78,7 +80,7 @@ const SuccessScreen = () => {
               <div className="h-full bg-primary w-full rounded-full animate-[progress_4s_linear_forwards]" style={{ animation: 'progress 4s linear forwards' }}></div>
             </div>
             <p className="text-slate-400 dark:text-slate-500 text-sm md:text-base font-medium text-center">
-              Returning to home screen...
+              {t('success.returning_home')}
             </p>
           </div>
         </div>

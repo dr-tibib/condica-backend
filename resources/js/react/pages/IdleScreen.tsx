@@ -81,7 +81,7 @@ const IdleScreen = () => {
           >
             <span className="material-symbols-outlined text-4xl text-white">touch_app</span>
             <span className="text-white text-2xl md:text-3xl font-bold leading-normal tracking-wide">
-              Tap to Enter Your Code
+              {t('idle.tap_to_enter')}
             </span>
           </button>
 
@@ -91,7 +91,7 @@ const IdleScreen = () => {
             className="flex w-full max-w-[280px] h-[60px] cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
           >
             <span className="text-[#111318] dark:text-white text-lg font-semibold leading-normal tracking-wide">
-              Delegation
+              {t('idle.delegation')}
             </span>
           </button>
         </div>

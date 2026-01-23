@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const CodeEntryScreen = () => {
+  const { t } = useTranslation();
   const [code, setCode] = useState('');
   const [codeLength, setCodeLength] = useState(3);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +53,7 @@ const CodeEntryScreen = () => {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.message || 'Invalid code');
+            throw new Error(data.message || t('code_entry.invalid_code'));
         }
 
         if (flow === 'regular') {
@@ -112,10 +114,10 @@ const CodeEntryScreen = () => {
               <span className="material-symbols-outlined text-4xl">lock_person</span>
             </div>
             <h1 className="text-3xl md:text-[32px] font-bold text-slate-900 dark:text-white tracking-tight text-center leading-tight">
-              Enter Your Employee Code
+              {t('code_entry.title')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-lg font-medium text-center max-w-sm">
-              Enter your {codeLength}-digit access PIN
+              {t('code_entry.subtitle', { length: codeLength })}
             </p>
           </div>
 

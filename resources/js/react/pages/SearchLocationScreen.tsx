@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const SearchLocationScreen = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [query, setQuery] = useState('Coffee Shop Downtown');
 
@@ -28,7 +30,7 @@ const SearchLocationScreen = () => {
                         <button onClick={handleBack} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors">
                             <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>arrow_back</span>
                         </button>
-                        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Select Location</h2>
+                        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{t('search.select_location')}</h2>
                     </div>
                 </header>
                 <main className="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-[#1a202c]">
@@ -53,7 +55,7 @@ const SearchLocationScreen = () => {
                         </label>
                     </div>
                     <div className="px-6 pt-4 pb-2 shrink-0">
-                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Search Results</h3>
+                        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('search.search_results')}</h3>
                     </div>
                     <div className="flex-1 px-4 pb-6 flex flex-col gap-3">
                         {searchResults.map(result => (
