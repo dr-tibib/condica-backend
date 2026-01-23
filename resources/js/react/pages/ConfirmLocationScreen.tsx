@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getKioskWorkplaceId } from '../utils/kiosk';
 
 const ConfirmLocationScreen = () => {
     const { t } = useTranslation();
@@ -22,6 +23,8 @@ const ConfirmLocationScreen = () => {
         setIsLoading(true);
 
         try {
+            const workplaceId = getKioskWorkplaceId();
+
             const response = await fetch('/api/delegations', {
                 method: 'POST',
                 headers: {
@@ -35,6 +38,7 @@ const ConfirmLocationScreen = () => {
                     address: selectedLocation.address,
                     latitude: selectedLocation.latitude,
                     longitude: selectedLocation.longitude,
+                    workplace_id: workplaceId,
                     // device_info?
                 })
             });

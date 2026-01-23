@@ -29,9 +29,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/today', [PresenceController::class, 'today']);
     });
 
-    // Workplaces
-    Route::get('/workplaces', [WorkplaceController::class, 'index']);
-
     // Devices
     Route::post('/devices/register', [DeviceController::class, 'register']);
 });

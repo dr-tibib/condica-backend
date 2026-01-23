@@ -64,13 +64,25 @@ class KioskController extends Controller
         // Regular flow: Check In / Check Out
         try {
             if ($user->isCurrentlyPresent()) {
-                // Check Out
-                $event = $this->presenceService->checkOut($user, [
-                    'method' => 'kiosk',
-                    'device_info' => $validated['device_info'] ?? null,
-                ]);
-                $message = 'Checked out successfully.';
-                $type = 'checkout';
+                $latestEvent = $user->latestPresenceEvent;
+
+                if ($latestEvent && $latestEvent->isDelegationStart()) {
+                    // Only end the delegation, do not check out completely
+                    $event = $this->presenceService->delegationEndOnly($user, [
+                        'method' => 'kiosk',
+                        'device_info' => $validated['device_info'] ?? null,
+                    ]);
+                    $message = 'Delegation ended successfully.';
+                    $type = 'delegation_end';
+                } else {
+                    // Check Out
+                    $event = $this->presenceService->checkOut($user, [
+                        'method' => 'kiosk',
+                        'device_info' => $validated['device_info'] ?? null,
+                    ]);
+                    $message = 'Checked out successfully.';
+                    $type = 'checkout';
+                }
             } else {
                 // Check In
                 // For regular flow, we need a workplace ID.

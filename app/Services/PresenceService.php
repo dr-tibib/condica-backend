@@ -55,8 +55,9 @@ class PresenceService
         }
 
         // Check if user is already checked in
+        // Allow delegation_start to proceed even if checked in (it starts a nested/parallel event or switches context)
         $latestEvent = $user->latestPresenceEvent;
-        if ($latestEvent && ($latestEvent->isCheckIn())) {
+        if ($eventType !== 'delegation_start' && $latestEvent && ($latestEvent->isCheckIn())) {
             throw ValidationException::withMessages([
                 'status' => ['You are already checked in. Please check out first.'],
             ]);
@@ -88,8 +89,12 @@ class PresenceService
      */
     public function checkOut(User $user, array $data): PresenceEvent
     {
-        // Get the latest check-in event
-        $latestCheckIn = $user->latestCheckIn;
+        // Get the latest unpaired check-in event
+        $latestCheckIn = $user->presenceEvents()
+            ->whereIn('event_type', ['check_in', 'delegation_start'])
+            ->whereNull('pair_event_id')
+            ->latest('event_time')
+            ->first();
 
         if (! $latestCheckIn) {
             throw ValidationException::withMessages([
@@ -134,6 +139,48 @@ class PresenceService
             ]);
 
             return $checkOut;
+        });
+    }
+
+    /**
+     * End a delegation without checking out completely.
+     */
+    public function delegationEndOnly(User $user, array $data): PresenceEvent
+    {
+        $latestCheckIn = $user->presenceEvents()
+            ->where('event_type', 'delegation_start')
+            ->whereNull('pair_event_id')
+            ->latest('event_time')
+            ->first();
+
+        if (! $latestCheckIn) {
+            throw ValidationException::withMessages([
+                'status' => ['You are not in a delegation.'],
+            ]);
+        }
+
+        return DB::transaction(function () use ($user, $latestCheckIn, $data) {
+            $delegationEnd = PresenceEvent::create([
+                'user_id' => $user->id,
+                'workplace_id' => $latestCheckIn->workplace_id,
+                'event_type' => 'delegation_end',
+                'event_time' => now(),
+                'method' => $data['method'] ?? 'manual',
+                'latitude' => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
+                'accuracy' => $data['accuracy'] ?? null,
+                'device_info' => $data['device_info'] ?? null,
+                'app_version' => $data['app_version'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'pair_event_id' => $latestCheckIn->id,
+            ]);
+
+            // Update the delegation start with the pair event ID
+            $latestCheckIn->update([
+                'pair_event_id' => $delegationEnd->id,
+            ]);
+
+            return $delegationEnd;
         });
     }
 }

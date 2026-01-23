@@ -6,6 +6,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Delegation;
+use App\Models\PresenceEvent;
 use App\Models\User;
 use App\Services\PresenceService;
 use Illuminate\Http\JsonResponse;
@@ -58,12 +59,30 @@ class DelegationController extends Controller
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'device_info' => ['nullable', 'array'],
+            'workplace_id' => ['nullable', 'exists:workplaces,id'],
         ]);
 
         $user = User::findOrFail($validated['user_id']);
 
         try {
             return DB::transaction(function () use ($user, $validated) {
+                // 0. Auto Check-in if not present
+                if (! $user->isCurrentlyPresent()) {
+                    $workplaceId = $validated['workplace_id'] ?? $user->default_workplace_id;
+
+                    // We need a workplace to check in.
+                    if ($workplaceId) {
+                        PresenceEvent::create([
+                            'user_id' => $user->id,
+                            'workplace_id' => $workplaceId,
+                            'event_type' => 'check_in',
+                            'event_time' => now()->subSecond(),
+                            'method' => 'auto',
+                            'notes' => 'Auto check-in for delegation',
+                        ]);
+                    }
+                }
+
                 // 1. Create Presence Event
                 $event = $this->presenceService->checkIn($user, [
                     'event_type' => 'delegation_start',

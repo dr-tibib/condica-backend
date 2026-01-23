@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getKioskWorkplaceId } from '../utils/kiosk';
 
 const CodeEntryScreen = () => {
   const { t } = useTranslation();
@@ -36,6 +37,8 @@ const CodeEntryScreen = () => {
     setError(null);
 
     try {
+        const workplaceId = getKioskWorkplaceId();
+
         const response = await fetch('/api/kiosk/submit-code', {
             method: 'POST',
             headers: {
@@ -45,8 +48,7 @@ const CodeEntryScreen = () => {
             body: JSON.stringify({
                 code: submittedCode,
                 flow: flow,
-                // In a real kiosk app, workplace_id might come from local storage or config
-                // workplace_id: 1
+                workplace_id: workplaceId,
             })
         });
 
@@ -54,6 +56,16 @@ const CodeEntryScreen = () => {
 
         if (!response.ok) {
             throw new Error(data.message || t('code_entry.invalid_code'));
+        }
+
+        if (data.type === 'delegation_end') {
+            navigate('/delegation-ended', {
+                state: {
+                    user: data.user,
+                    code: submittedCode // Pass code for checkout
+                }
+            });
+            return;
         }
 
         if (flow === 'regular') {
