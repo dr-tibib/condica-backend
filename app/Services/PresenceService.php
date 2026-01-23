@@ -35,7 +35,8 @@ class PresenceService
             ]);
         }
 
-        $workplace = Workplace::findOrFail($data['workplace_id']);
+        $eventType = $data['event_type'] ?? 'check_in';
+        $workplaceId = $data['workplace_id'] ?? null;
 
         if ($eventType === 'check_in') {
             if (! $workplaceId) {
