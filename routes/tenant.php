@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\API\ConfigController;
 use App\Http\Controllers\API\KioskController;
+use App\Http\Controllers\API\LeaveController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -41,4 +42,13 @@ Route::middleware([
         Route::post('/submit-code', [KioskController::class, 'submitCode']);
         Route::post('/delegation', [KioskController::class, 'startDelegation']);
     });
+
+    Route::prefix('v1/leave')->group(function () {
+        Route::get('balance', [LeaveController::class, 'balance']);
+        Route::post('request', [LeaveController::class, 'request']);
+        Route::post('approve', [LeaveController::class, 'approve']);
+        Route::get('team-calendar', [LeaveController::class, 'teamCalendar']);
+    });
+
+    Route::get('v1/admin/export/payroll', [LeaveController::class, 'exportPayroll']);
 });
