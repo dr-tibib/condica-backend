@@ -77,7 +77,7 @@ const IdleScreen = () => {
           {/* Primary Action Button */}
           <button
             onClick={handleRegularFlow}
-            className="group flex w-full max-w-[500px] h-[120px] cursor-pointer items-center justify-center gap-4 overflow-hidden rounded-xl bg-primary hover:bg-blue-600 active:bg-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+            className="group flex w-full max-w-[600px] h-[120px] cursor-pointer items-center justify-center gap-4 overflow-hidden rounded-xl bg-primary hover:bg-blue-600 active:bg-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/20 active:scale-[0.98]"
           >
             <span className="material-symbols-outlined text-4xl text-white">touch_app</span>
             <span className="text-white text-2xl md:text-3xl font-bold leading-normal tracking-wide">
