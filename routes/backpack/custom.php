@@ -22,6 +22,9 @@ Route::group([
     Route::crud('presence-event', 'PresenceEventCrudController');
     Route::get('presence-event/export', 'PresenceEventCrudController@export');
     Route::crud('workplace-presence', 'WorkplacePresenceDashboardController');
+    Route::crud('leave-type', 'LeaveTypeCrudController');
+    Route::crud('public-holiday', 'PublicHolidayCrudController');
+    Route::crud('leave-request', 'LeaveRequestCrudController');
 }); // this should be the absolute last line of this file
 
 /**

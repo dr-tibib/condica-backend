@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\LeaveRequest;
 use App\Models\PresenceEvent;
 use App\Models\User;
 use App\Models\Workplace;
@@ -21,8 +22,20 @@ class PresenceService
      */
     public function checkIn(User $user, array $data): PresenceEvent
     {
-        $eventType = $data['event_type'] ?? 'check_in';
-        $workplaceId = $data['workplace_id'] ?? null;
+        // Check if user is on approved leave today
+        $onLeave = LeaveRequest::where('user_id', $user->id)
+            ->where('status', 'APPROVED')
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
+            ->exists();
+
+        if ($onLeave) {
+            throw ValidationException::withMessages([
+                'status' => ['You cannot check in while on approved leave.'],
+            ]);
+        }
+
+        $workplace = Workplace::findOrFail($data['workplace_id']);
 
         if ($eventType === 'check_in') {
             if (! $workplaceId) {

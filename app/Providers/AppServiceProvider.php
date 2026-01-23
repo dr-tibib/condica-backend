@@ -20,5 +20,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // \App\Models\CentralUser::observe(\App\Listeners\SyncNewSuperAdminToAllTenants::class);
+        \App\Models\LeaveRequest::observe(\App\Observers\LeaveRequestObserver::class);
     }
 }
