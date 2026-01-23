@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 declare global {
   interface Window {
@@ -11,6 +13,7 @@ declare global {
  * Implements the design from docs/design/idle_screen
  */
 const IdleScreen = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [companyName, setCompanyName] = useState(window.tenant?.company_name || 'Acme Corp HQ');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -40,15 +43,14 @@ const IdleScreen = () => {
     navigate('/code-entry', { state: { flow: 'delegation' } });
   };
 
-  const hours = currentTime.getHours().toString().padStart(2, '0');
-  const minutes = currentTime.getMinutes().toString().padStart(2, '0');
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const dayName = days[currentTime.getDay()];
-  const monthName = months[currentTime.getMonth()];
-  const dayNum = currentTime.getDate();
-
-  const dateString = `${hours}:${minutes} ${dayName}, ${monthName} ${dayNum}`;
+  const dateString = currentTime.toLocaleString(i18n.language, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-[#111318] dark:text-white font-display antialiased h-screen w-full overflow-hidden flex flex-col">
@@ -65,7 +67,7 @@ const IdleScreen = () => {
             />
             {/* Welcome Title */}
             <h1 className="text-3xl md:text-[32px] font-bold leading-tight tracking-tight text-center text-[#111318] dark:text-white">
-              Welcome to {companyName}
+              {t('welcome', { company: companyName })}
             </h1>
           </div>
         </div>
@@ -96,12 +98,13 @@ const IdleScreen = () => {
 
         {/* Footer Section */}
         <div className="flex-1 flex flex-col justify-end items-center w-full pb-8">
-          <div className="flex items-center gap-2 opacity-80">
+          <div className="flex items-center gap-2 opacity-80 mb-4">
             <span className="material-symbols-outlined text-xl">schedule</span>
             <p className="text-lg md:text-xl font-medium text-center">
               {dateString}
             </p>
           </div>
+          <LanguageSwitcher />
         </div>
       </div>
     </div>

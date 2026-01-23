@@ -16,6 +16,8 @@
         "backpack/pro": "^3.0",
         "backpack/settings": "^3.2",
         "backpack/theme-tabler": "^2.0",
+        "laravel-lang/common": "*",
+        "laravel-lang/publisher": "*",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10.1",
