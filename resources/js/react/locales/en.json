@@ -1,4 +1,65 @@
 {
   "welcome": "Welcome to {{company}}",
-  "language": "Language"
+  "language": "Language",
+  "common": {
+    "go_back": "Go back",
+    "back": "Back",
+    "processing": "Processing...",
+    "cancel": "Cancel",
+    "ok": "OK"
+  },
+  "idle": {
+    "tap_to_enter": "Tap to Enter Your Code",
+    "delegation": "Delegation"
+  },
+  "code_entry": {
+    "title": "Enter Your Employee Code",
+    "subtitle": "Enter your {{length}}-digit access PIN",
+    "invalid_code": "Invalid code"
+  },
+  "delegation": {
+    "where_going": "Where are you going?",
+    "search_placeholder": "Search address or client name",
+    "saved_locations": "Saved Locations"
+  },
+  "search": {
+    "select_location": "Select Location",
+    "search_results": "Search Results"
+  },
+  "confirm": {
+    "workplace_presence": "Workplace Presence",
+    "title": "Confirm Delegation Location",
+    "subtitle": "Please verify your delegation site details below before proceeding.",
+    "current_location": "Current Location",
+    "no_location": "No Location Selected",
+    "save_future": "Save for future use",
+    "remember_location": "Remember this location for your next check-in",
+    "start_delegation": "Start Delegation",
+    "delegation_failed": "Delegation failed"
+  },
+  "success": {
+    "checkin": {
+      "title": "Checked In!",
+      "message": "Have a productive day!"
+    },
+    "checkout": {
+      "title": "Checked Out!",
+      "message": "See you tomorrow!"
+    },
+    "delegation_start": {
+      "title": "Delegation Started!",
+      "message": "You're all set for today."
+    },
+    "delegation_end": {
+      "title": "Delegation Ended!",
+      "message": "Welcome back!"
+    },
+    "returning_home": "Returning to home screen..."
+  },
+  "error": {
+    "delegation_not_available": {
+        "title": "Delegation Not Available",
+        "message": "You don't have delegation permissions. Contact your supervisor if you need access."
+    }
+  }
 }

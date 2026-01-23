@@ -47,7 +47,7 @@ describe('ConfirmLocationScreen', () => {
         expect(screen.getByText('Test Loc')).toBeInTheDocument();
 
         // Click Start Delegation
-        fireEvent.click(screen.getByText('Start Delegation'));
+        fireEvent.click(screen.getByText('confirm.start_delegation'));
 
         // Verify API call
         await waitFor(() => {

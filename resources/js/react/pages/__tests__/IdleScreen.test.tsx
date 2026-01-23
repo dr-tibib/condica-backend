@@ -45,8 +45,8 @@ describe('IdleScreen', () => {
     );
 
     expect(screen.getByText('Welcome to Acme Corp HQ')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Tap to Enter Your Code/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Delegation/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /idle.tap_to_enter/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /idle.delegation/i })).toBeInTheDocument();
   });
 
   it('renders the welcome message with tenant company name', () => {
@@ -83,7 +83,7 @@ describe('IdleScreen', () => {
             </MemoryRouter>
         );
 
-        const primaryButton = screen.getByRole('button', { name: /Tap to Enter Your Code/i });
+        const primaryButton = screen.getByRole('button', { name: /idle.tap_to_enter/i });
         primaryButton.click();
 
         expect(mockedNavigate).toHaveBeenCalledWith('/code-entry', { state: { flow: 'regular' } });
@@ -96,7 +96,7 @@ describe('IdleScreen', () => {
             </MemoryRouter>
         );
 
-        const secondaryButton = screen.getByRole('button', { name: 'Delegation' });
+        const secondaryButton = screen.getByRole('button', { name: /idle.delegation/i });
         secondaryButton.click();
 
         expect(mockedNavigate).toHaveBeenCalledWith('/code-entry', { state: { flow: 'delegation' } });

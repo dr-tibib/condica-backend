@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const DelegationLocationsScreen = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
     const handleBack = () => {
@@ -30,7 +32,7 @@ const DelegationLocationsScreen = () => {
           <header className="flex items-center justify-between px-8 py-6 pt-8">
             <button
               onClick={handleBack}
-              aria-label="Go back"
+              aria-label={t('common.go_back')}
               className="flex items-center justify-center w-12 h-12 rounded-full hover:bg-background-light dark:hover:bg-gray-800 transition-colors text-[#111318] dark:text-white"
             >
               <span className="material-symbols-outlined text-[28px]">arrow_back</span>
@@ -48,7 +50,7 @@ const DelegationLocationsScreen = () => {
           <main className="flex-1 flex flex-col px-8 pb-8">
             <div className="mt-4 mb-8">
               <h1 className="text-[#111318] dark:text-white text-[40px] font-black leading-tight tracking-[-0.033em]">
-                Where are you going?
+                {t('delegation.where_going')}
               </h1>
             </div>
             <div className="mb-10">
@@ -61,14 +63,14 @@ const DelegationLocationsScreen = () => {
                 <input
                   onFocus={handleSearch}
                   className="flex w-full h-full pl-14 pr-4 rounded-xl border-2 border-transparent bg-background-light dark:bg-gray-800 text-[#111318] dark:text-white text-lg placeholder:text-[#616e89] focus:outline-none focus:border-primary focus:ring-0 transition-all shadow-sm"
-                  placeholder="Search address or client name"
+                  placeholder={t('delegation.search_placeholder')}
                   type="text"
                 />
               </label>
             </div>
             <div className="flex flex-col gap-4">
               <h3 className="text-[#111318] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-2">
-                Saved Locations
+                {t('delegation.saved_locations')}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {savedLocations.map(location => (

@@ -1,4 +1,65 @@
 {
   "welcome": "Üdvözöljük: {{company}}",
-  "language": "Nyelv"
+  "language": "Nyelv",
+  "common": {
+    "go_back": "Vissza",
+    "back": "Vissza",
+    "processing": "Feldolgozás...",
+    "cancel": "Mégse",
+    "ok": "OK"
+  },
+  "idle": {
+    "tap_to_enter": "Koppintson a kód megadásához",
+    "delegation": "Kiküldetés"
+  },
+  "code_entry": {
+    "title": "Adja meg alkalmazotti kódját",
+    "subtitle": "Adja meg a {{length}} jegyű hozzáférési PIN-kódot",
+    "invalid_code": "Érvénytelen kód"
+  },
+  "delegation": {
+    "where_going": "Hová megy?",
+    "search_placeholder": "Cím vagy ügyfélnév keresése",
+    "saved_locations": "Mentett helyszínek"
+  },
+  "search": {
+    "select_location": "Válasszon helyszínt",
+    "search_results": "Keresési eredmények"
+  },
+  "confirm": {
+    "workplace_presence": "Munkahelyi jelenlét",
+    "title": "Kiküldetés helyszínének megerősítése",
+    "subtitle": "Kérjük, ellenőrizze a kiküldetés részleteit a folytatás előtt.",
+    "current_location": "Jelenlegi helyszín",
+    "no_location": "Nincs kiválasztott helyszín",
+    "save_future": "Mentés jövőbeli használatra",
+    "remember_location": "Helyszín megjegyzése a következő bejelentkezéshez",
+    "start_delegation": "Kiküldetés indítása",
+    "delegation_failed": "A kiküldetés sikertelen"
+  },
+  "success": {
+    "checkin": {
+      "title": "Bejelentkezve!",
+      "message": "Legyen produktív napja!"
+    },
+    "checkout": {
+      "title": "Kijelentkezve!",
+      "message": "Viszontlátásra holnap!"
+    },
+    "delegation_start": {
+      "title": "Kiküldetés elindítva!",
+      "message": "Minden készen áll mára."
+    },
+    "delegation_end": {
+      "title": "Kiküldetés befejezve!",
+      "message": "Üdvözöljük újra!"
+    },
+    "returning_home": "Visszatérés a kezdőképernyőre..."
+  },
+  "error": {
+    "delegation_not_available": {
+        "title": "A kiküldetés nem elérhető",
+        "message": "Nincs jogosultsága kiküldetéshez. Forduljon feletteséhez, ha hozzáférésre van szüksége."
+    }
+  }
 }
