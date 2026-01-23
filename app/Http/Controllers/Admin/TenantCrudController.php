@@ -22,25 +22,25 @@ class TenantCrudController extends CrudController
     {
         CRUD::setModel(\App\Models\Tenant::class);
         CRUD::setRoute(config('backpack.base.route_prefix').'/tenant');
-        CRUD::setEntityNameStrings('tenant', 'tenants');
+        CRUD::setEntityNameStrings(__('tenant'), __('tenants'));
 
         // Ensure we can only manage tenants from central context (assumed by route definition location)
     }
 
     protected function setupListOperation()
     {
-        CRUD::column('id')->label('Tenant ID');
+        CRUD::column('id')->label(__('Tenant ID'));
         // display the number of users
-        CRUD::column('users')->type('relationship_count')->label('Users');
-        CRUD::column('company_name')->label('Company Name');
+        CRUD::column('users')->type('relationship_count')->label(__('Users'));
+        CRUD::column('company_name')->label(__('Company Name'));
     }
 
     protected function setupCreateOperation()
     {
-        CRUD::field('id')->label('Tenant ID (Subdomain/Domain ID)')->hint('Unique identifier for the tenant');
-        CRUD::field('company_name')->label('Company Name');
+        CRUD::field('id')->label(__('Tenant ID (Subdomain/Domain ID)'))->hint(__('Unique identifier for the tenant'));
+        CRUD::field('company_name')->label(__('Company Name'));
         CRUD::field('logo')
-            ->label('Company Logo')
+            ->label(__('Company Logo'))
             ->type('upload')
             ->withFiles([
                 'disk' => 'public',
@@ -48,27 +48,27 @@ class TenantCrudController extends CrudController
             ]);
 
         CRUD::field('code_length')
-            ->label('Access Code Length')
+            ->label(__('Access Code Length'))
             ->type('number')
             ->default(3)
             ->attributes(['min' => 3, 'max' => 10])
-            ->hint('Length of the code used for kiosk entry (default: 3)')
+            ->hint(__('Length of the code used for kiosk entry (default: 3)'))
             ->fake(true)
             ->store_in('data');
 
         // Add users relationship field?
         // Usually we assign users to tenants, or tenants to users.
         // Let's add a select2_multiple field for users
-        CRUD::field('users')->label('Assigned Users')->type('relationship')->attribute('email');
+        CRUD::field('users')->label(__('Assigned Users'))->type('relationship')->attribute('email');
 
         CRUD::field('domains')
-            ->label('Domains')
+            ->label(__('Domains'))
             ->type('relationship')
             ->subfields([
                 [
                     'name' => 'domain',
                     'type' => 'text',
-                    'label' => 'Domain Name',
+                    'label' => __('Domain Name'),
                 ],
             ])
             ->reorderable(false)

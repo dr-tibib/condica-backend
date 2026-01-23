@@ -29,7 +29,7 @@ class WorkplaceCrudController extends CrudController
     {
         CRUD::setModel(\App\Models\Workplace::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/workplace');
-        CRUD::setEntityNameStrings('workplace', 'workplaces');
+        CRUD::setEntityNameStrings(__('workplace'), __('workplaces'));
     }
 
     /**
@@ -41,9 +41,9 @@ class WorkplaceCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::column('name')->label('Name');
+        CRUD::column('name')->label(__('Name'));
 
-        CRUD::column('location')->label('Location')->type('closure')->function(function ($entry) {
+        CRUD::column('location')->label(__('Location'))->type('closure')->function(function ($entry) {
             if ($entry->latitude && $entry->longitude) {
                 return number_format($entry->latitude, 6) . ', ' . number_format($entry->longitude, 6);
             }
@@ -51,21 +51,21 @@ class WorkplaceCrudController extends CrudController
             return '-';
         });
 
-        CRUD::column('radius')->label('Radius (m)')->suffix(' m');
+        CRUD::column('radius')->label(__('Radius (m)'))->suffix(' m');
 
-        CRUD::column('timezone')->label('Timezone');
+        CRUD::column('timezone')->label(__('Timezone'));
 
-        CRUD::column('wifi_ssid')->label('WiFi SSID');
+        CRUD::column('wifi_ssid')->label(__('WiFi SSID'));
 
-        CRUD::column('is_active')->label('Active')->type('boolean');
+        CRUD::column('is_active')->label(__('Active'))->type('boolean');
 
-        CRUD::column('currently_present')->label('Present Now')->type('closure')->function(function ($entry) {
+        CRUD::column('currently_present')->label(__('Present Now'))->type('closure')->function(function ($entry) {
             $count = $entry->currentlyPresentUsers()->count();
 
-            return $count > 0 ? '<span class="badge bg-success">' . $count . ' present</span>' : '<span class="badge bg-secondary">None</span>';
+            return $count > 0 ? '<span class="badge bg-success">' . $count . ' ' . __('present') . '</span>' : '<span class="badge bg-secondary">' . __('None') . '</span>';
         })->escaped(false);
 
-        CRUD::column('created_at')->label('Created');
+        CRUD::column('created_at')->label(__('Created'));
     }
 
     /**
@@ -81,18 +81,18 @@ class WorkplaceCrudController extends CrudController
         Widget::add()->type('script')->content('assets/js/admin/workplace_map.js');
 
         CRUD::field('name')
-            ->label('Workplace Name')
+            ->label(__('Workplace Name'))
             ->type('text')
-            ->attributes(['placeholder' => 'e.g. Main Office, Branch 1'])
-            ->hint('A descriptive name for this workplace location');
+            ->attributes(['placeholder' => __('e.g. Main Office, Branch 1')])
+            ->hint(__('A descriptive name for this workplace location'));
 
-        CRUD::field('street_address')->label('Street Address')->type('text');
-        CRUD::field('city')->label('City')->type('text')->wrapper(['class' => 'form-group col-md-6']);
-        CRUD::field('county')->label('County')->type('text')->wrapper(['class' => 'form-group col-md-6']);
-        CRUD::field('country')->label('Country')->type('text');
+        CRUD::field('street_address')->label(__('Street Address'))->type('text');
+        CRUD::field('city')->label(__('City'))->type('text')->wrapper(['class' => 'form-group col-md-6']);
+        CRUD::field('county')->label(__('County'))->type('text')->wrapper(['class' => 'form-group col-md-6']);
+        CRUD::field('country')->label(__('Country'))->type('text');
 
         CRUD::field('location_map')
-            ->label('Location')
+            ->label(__('Location'))
             ->type('google_map')
             ->map_options([
                 'default_lat' => 46.7712,
@@ -102,7 +102,7 @@ class WorkplaceCrudController extends CrudController
             ->wrapper(['class' => 'form-group col-md-12']);
 
         CRUD::field('radius')
-            ->label('Geofence Radius (meters)')
+            ->label(__('Geofence Radius (meters)'))
             ->type('range')
             ->attributes([
                 'min' => 10,
@@ -110,27 +110,27 @@ class WorkplaceCrudController extends CrudController
                 'step' => 10,
             ])
             ->default(100)
-            ->hint('Distance in meters for check-in/check-out validation');
+            ->hint(__('Distance in meters for check-in/check-out validation'));
 
         CRUD::field('timezone')
-            ->label('Timezone')
+            ->label(__('Timezone'))
             ->type('select_from_array')
             ->options(array_combine(\DateTimeZone::listIdentifiers(), \DateTimeZone::listIdentifiers()))
             ->allows_null(false)
             ->default('UTC')
-            ->hint('Timezone for this workplace location');
+            ->hint(__('Timezone for this workplace location'));
 
         CRUD::field('wifi_ssid')
-            ->label('WiFi SSID')
+            ->label(__('WiFi SSID'))
             ->type('text')
-            ->attributes(['placeholder' => 'Company WiFi'])
-            ->hint('Optional: WiFi network name for additional validation');
+            ->attributes(['placeholder' => __('Company WiFi')])
+            ->hint(__('Optional: WiFi network name for additional validation'));
 
         CRUD::field('is_active')
-            ->label('Active')
+            ->label(__('Active'))
             ->type('switch')
             ->default(true)
-            ->hint('Inactive workplaces cannot be used for check-ins');
+            ->hint(__('Inactive workplaces cannot be used for check-ins'));
     }
 
     /**
