@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ConfigController;
 use App\Http\Controllers\API\DelegationController;
 use App\Http\Controllers\API\KioskController;
 use App\Http\Controllers\API\LeaveController;
+use App\Http\Controllers\API\WorkplaceController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -46,6 +47,10 @@ Route::middleware([
     Route::prefix('delegations')->group(function () {
         Route::get('/', [DelegationController::class, 'index']);
         Route::post('/', [DelegationController::class, 'store']);
+    });
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/workplaces', [WorkplaceController::class, 'index']);
     });
 
     Route::prefix('v1/leave')->group(function () {
