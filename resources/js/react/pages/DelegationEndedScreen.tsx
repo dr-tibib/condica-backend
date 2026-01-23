@@ -8,7 +8,6 @@ const DelegationEndedScreen = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, code } = location.state || {};
-    const [timeLeft, setTimeLeft] = useState(10); // 10 seconds timeout
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
@@ -18,18 +17,11 @@ const DelegationEndedScreen = () => {
              return;
         }
 
-        const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    navigate('/');
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
+        const timer = setTimeout(() => {
+            navigate('/');
+        }, 10000);
 
-        return () => clearInterval(timer);
+        return () => clearTimeout(timer);
     }, [navigate, user, code]);
 
     const handleCheckOut = async () => {
@@ -101,11 +93,22 @@ const DelegationEndedScreen = () => {
                          {isLoading ? t('common.processing', 'Processing...') : t('common.check_out', 'Check Out Now')}
                      </button>
 
-                     <p className="text-sm text-slate-400 mt-4">
-                         {t('common.redirecting_in', { seconds: timeLeft })}
-                     </p>
+                     <div className="w-full max-w-md flex flex-col items-center gap-4 mt-4">
+                         <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                             <div className="h-full bg-primary w-full rounded-full animate-[progress_10s_linear_forwards]" style={{ animation: 'progress 10s linear forwards' }}></div>
+                         </div>
+                         <p className="text-slate-400 dark:text-slate-500 text-sm md:text-base font-medium text-center">
+                             {t('success.returning_home')}
+                         </p>
+                     </div>
                  </div>
              </div>
+             <style>{`
+                @keyframes progress {
+                  from { width: 0%; }
+                  to { width: 100%; }
+                }
+              `}</style>
         </div>
     );
 };
