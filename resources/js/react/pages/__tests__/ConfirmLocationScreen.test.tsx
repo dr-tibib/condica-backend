@@ -11,7 +11,7 @@ vi.mock('react-router-dom', async () => {
         useNavigate: () => mockedNavigate,
         useLocation: () => ({
             state: {
-                location: { id: 10, name: 'Test Loc', address: '123 Test', icon: 'test' },
+                location: { place_id: 'place_123', name: 'Test Loc', address: '123 Test', latitude: 10, longitude: 10, icon: 'test' },
                 user: { id: 99, name: 'John Doe' }
             }
         }),
@@ -51,12 +51,12 @@ describe('ConfirmLocationScreen', () => {
 
         // Verify API call
         await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith('/api/kiosk/delegation', expect.objectContaining({
+            expect(global.fetch).toHaveBeenCalledWith('/api/delegations', expect.objectContaining({
                 method: 'POST',
                 body: expect.stringContaining('"user_id":99'),
             }));
-            expect(global.fetch).toHaveBeenCalledWith('/api/kiosk/delegation', expect.objectContaining({
-                body: expect.stringContaining('"workplace_id":10'),
+            expect(global.fetch).toHaveBeenCalledWith('/api/delegations', expect.objectContaining({
+                body: expect.stringContaining('"place_id":"place_123"'),
             }));
         });
 

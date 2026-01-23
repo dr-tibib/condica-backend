@@ -37,28 +37,35 @@ class PresenceService
 
         $workplace = Workplace::findOrFail($data['workplace_id']);
 
-        // Validate geofence if location data is provided
-        if (isset($data['latitude']) && isset($data['longitude'])) {
-            if (! $workplace->isLocationWithinGeofence((float) $data['latitude'], (float) $data['longitude'])) {
-                throw ValidationException::withMessages([
-                    'location' => ['You are not within the geofence radius of this workplace.'],
-                ]);
+        if ($eventType === 'check_in') {
+            if (! $workplaceId) {
+                throw ValidationException::withMessages(['workplace_id' => 'Workplace is required for check-in.']);
+            }
+            $workplace = Workplace::findOrFail($workplaceId);
+
+            // Validate geofence if location data is provided
+            if (isset($data['latitude']) && isset($data['longitude'])) {
+                if (! $workplace->isLocationWithinGeofence((float) $data['latitude'], (float) $data['longitude'])) {
+                    throw ValidationException::withMessages([
+                        'location' => ['You are not within the geofence radius of this workplace.'],
+                    ]);
+                }
             }
         }
 
         // Check if user is already checked in
         $latestEvent = $user->latestPresenceEvent;
-        if ($latestEvent && $latestEvent->event_type === 'check_in') {
+        if ($latestEvent && ($latestEvent->isCheckIn())) {
             throw ValidationException::withMessages([
                 'status' => ['You are already checked in. Please check out first.'],
             ]);
         }
 
-        return DB::transaction(function () use ($user, $data) {
+        return DB::transaction(function () use ($user, $data, $eventType, $workplaceId) {
             return PresenceEvent::create([
                 'user_id' => $user->id,
-                'workplace_id' => $data['workplace_id'],
-                'event_type' => 'check_in',
+                'workplace_id' => $workplaceId,
+                'event_type' => $eventType,
                 'event_time' => now(),
                 'method' => $data['method'],
                 'latitude' => $data['latitude'] ?? null,
@@ -89,21 +96,26 @@ class PresenceService
             ]);
         }
 
-        // Validate geofence if enabled for the workplace
-        $workplace = $latestCheckIn->workplace;
-        if (isset($data['latitude']) && isset($data['longitude'])) {
-            if (! $workplace->isLocationWithinGeofence((float) $data['latitude'], (float) $data['longitude'])) {
-                throw ValidationException::withMessages([
-                    'location' => ['You are not within the geofence radius of your check-in workplace.'],
-                ]);
+        // Determine event type based on the start event
+        $eventType = $latestCheckIn->event_type === 'delegation_start' ? 'delegation_end' : 'check_out';
+
+        // Validate geofence if enabled for the workplace and it's a regular check-in
+        if ($latestCheckIn->event_type === 'check_in') {
+            $workplace = $latestCheckIn->workplace;
+            if ($workplace && isset($data['latitude']) && isset($data['longitude'])) {
+                if (! $workplace->isLocationWithinGeofence((float) $data['latitude'], (float) $data['longitude'])) {
+                    throw ValidationException::withMessages([
+                        'location' => ['You are not within the geofence radius of your check-in workplace.'],
+                    ]);
+                }
             }
         }
 
-        return DB::transaction(function () use ($user, $latestCheckIn, $data) {
+        return DB::transaction(function () use ($user, $latestCheckIn, $data, $eventType) {
             $checkOut = PresenceEvent::create([
                 'user_id' => $user->id,
                 'workplace_id' => $latestCheckIn->workplace_id,
-                'event_type' => 'check_out',
+                'event_type' => $eventType,
                 'event_time' => now(),
                 'method' => $data['method'],
                 'latitude' => $data['latitude'] ?? null,
