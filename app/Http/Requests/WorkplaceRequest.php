@@ -43,13 +43,13 @@ class WorkplaceRequest extends FormRequest
     public function attributes()
     {
         return [
-            'name' => 'workplace name',
-            'latitude' => 'latitude',
-            'longitude' => 'longitude',
-            'radius' => 'geofence radius',
-            'timezone' => 'timezone',
-            'wifi_ssid' => 'WiFi SSID',
-            'is_active' => 'active status',
+            'name' => __('workplace name'),
+            'latitude' => __('latitude'),
+            'longitude' => __('longitude'),
+            'radius' => __('geofence radius'),
+            'timezone' => __('timezone'),
+            'wifi_ssid' => __('WiFi SSID'),
+            'is_active' => __('active status'),
         ];
     }
 
@@ -61,12 +61,12 @@ class WorkplaceRequest extends FormRequest
     public function messages()
     {
         return [
-            'name.required' => 'Please provide a name for the workplace.',
-            'latitude.between' => 'Latitude must be between -90 and 90.',
-            'longitude.between' => 'Longitude must be between -180 and 180.',
-            'radius.min' => 'Geofence radius must be at least 10 meters.',
-            'radius.max' => 'Geofence radius cannot exceed 10 kilometers.',
-            'timezone.timezone' => 'Please select a valid timezone.',
+            'name.required' => __('Please provide a name for the workplace.'),
+            'latitude.between' => __('Latitude must be between -90 and 90.'),
+            'longitude.between' => __('Longitude must be between -180 and 180.'),
+            'radius.min' => __('Geofence radius must be at least 10 meters.'),
+            'radius.max' => __('Geofence radius cannot exceed 10 kilometers.'),
+            'timezone.timezone' => __('Please select a valid timezone.'),
         ];
     }
 }

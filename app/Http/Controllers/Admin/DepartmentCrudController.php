@@ -22,14 +22,14 @@ class DepartmentCrudController extends CrudController
     {
         CRUD::setModel(Department::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/department');
-        CRUD::setEntityNameStrings('department', 'departments');
+        CRUD::setEntityNameStrings(__('department'), __('departments'));
     }
 
     protected function setupListOperation(): void
     {
-        CRUD::column('name')->label('Name');
-        CRUD::column('description')->label('Description');
-        CRUD::column('created_at')->label('Created At');
+        CRUD::column('name')->label(__('Name'));
+        CRUD::column('description')->label(__('Description'));
+        CRUD::column('created_at')->label(__('Created At'));
     }
 
     protected function setupCreateOperation(): void
@@ -39,8 +39,8 @@ class DepartmentCrudController extends CrudController
             'description' => 'nullable|string',
         ]);
 
-        CRUD::field('name')->label('Name');
-        CRUD::field('description')->label('Description')->type('textarea');
+        CRUD::field('name')->label(__('Name'));
+        CRUD::field('description')->label(__('Description'))->type('textarea');
     }
 
     protected function setupUpdateOperation(): void

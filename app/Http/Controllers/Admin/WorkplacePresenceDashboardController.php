@@ -21,7 +21,7 @@ class WorkplacePresenceDashboardController extends CrudController
     {
         $this->crud->setModel(User::class);
         $this->crud->setRoute(backpack_url('workplace-presence'));
-        $this->crud->setEntityNameStrings('workplace presence', 'workplace presence');
+        $this->crud->setEntityNameStrings(__('workplace presence'), __('workplace presence'));
 
         // Deny all write operations
         $this->crud->denyAccess(['create', 'update', 'delete']);
@@ -53,17 +53,17 @@ class WorkplacePresenceDashboardController extends CrudController
                     ->type('progress_white')
                     ->class('card mb-2')
                     ->value($currentlyWorkingCount)
-                    ->description('Employees Currently Working')
+                    ->description(__('Employees Currently Working'))
                     ->progress(100)
-                    ->hint('Real-time status'),
+                    ->hint(__('Real-time status')),
 
                 Widget::make()
                     ->type('progress_white')
                     ->class('card mb-2')
                     ->value($activeInRangeCount)
-                    ->description('Employees Active in Range')
+                    ->description(__('Employees Active in Range'))
                     ->progress(100)
-                    ->hint('Based on selected date range'),
+                    ->hint(__('Based on selected date range')),
             ]);
         }
 
@@ -81,7 +81,7 @@ class WorkplacePresenceDashboardController extends CrudController
             $this->crud->addFilter([
                 'type'  => 'date_range',
                 'name'  => 'date_range',
-                'label' => 'Date Range',
+                'label' => __('Date Range'),
             ],
             false,
             function ($value) { // if the filter is active
@@ -95,13 +95,13 @@ class WorkplacePresenceDashboardController extends CrudController
         // 5. Columns
         $this->crud->addColumn([
             'name' => 'name',
-            'label' => 'Employee',
+            'label' => __('Employee'),
             'type' => 'text',
         ]);
 
         $this->crud->addColumn([
             'name' => 'department_custom',
-            'label' => 'Department',
+            'label' => __('Department'),
             'type' => 'closure',
             'function' => function($entry) {
                 return $entry->department?->name ?? '-';
@@ -110,7 +110,7 @@ class WorkplacePresenceDashboardController extends CrudController
 
         $this->crud->addColumn([
             'name' => 'first_check_in',
-            'label' => 'First Check In',
+            'label' => __('First Check In'),
             'type' => 'closure',
             'function' => function($entry) {
                 // $entry->presenceEvents is already filtered by eager load
@@ -121,7 +121,7 @@ class WorkplacePresenceDashboardController extends CrudController
 
         $this->crud->addColumn([
             'name' => 'last_check_out',
-            'label' => 'Last Check Out',
+            'label' => __('Last Check Out'),
             'type' => 'closure',
             'function' => function($entry) {
                 $last = $entry->presenceEvents->where('event_type', 'check_out')->last();
@@ -131,7 +131,7 @@ class WorkplacePresenceDashboardController extends CrudController
 
         $this->crud->addColumn([
             'name' => 'total_time',
-            'label' => 'Total Time',
+            'label' => __('Total Time'),
             'type' => 'closure',
             'function' => function($entry) {
                 // Calculate total time from filtered events
@@ -142,19 +142,19 @@ class WorkplacePresenceDashboardController extends CrudController
 
         $this->crud->addColumn([
             'name' => 'status',
-            'label' => 'Status',
+            'label' => __('Status'),
             'type' => 'closure',
             'function' => function($entry) use ($startDate, $endDate) {
                  if ($entry->presenceEvents->isEmpty()) {
-                     return '<span class="badge bg-secondary">Absent</span>';
+                     return '<span class="badge bg-secondary">' . __('Absent') . '</span>';
                  }
 
                  // If looking at Today, check real-time status
                  if ($endDate->isToday() && $entry->isCurrentlyPresent()) {
-                     return '<span class="badge bg-success">Working Now</span>';
+                     return '<span class="badge bg-success">' . __('Working Now') . '</span>';
                  }
 
-                 return '<span class="badge bg-info">Present</span>';
+                 return '<span class="badge bg-info">' . __('Present') . '</span>';
             },
             'escaped' => false,
         ]);

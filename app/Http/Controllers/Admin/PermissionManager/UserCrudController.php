@@ -66,32 +66,32 @@ class UserCrudController extends CrudController
         // Custom columns
         $this->crud->addColumn([
             'name' => 'is_global_superadmin',
-            'label' => 'Global Superadmin',
+            'label' => __('Global Superadmin'),
             'type' => 'check',
         ]);
 
         if (!$this->isCentralTenant) {
             $this->crud->addColumn([
                 'name' => 'defaultWorkplace',
-                'label' => 'Default Workplace',
+                'label' => __('Default Workplace'),
                 'type' => 'relationship',
                 'attribute' => 'name',
             ]);
 
             $this->crud->addColumn([
                 'name' => 'presence_status',
-                'label' => 'Current Status',
+                'label' => __('Current Status'),
                 'type' => 'closure',
                 'function' => function ($entry) {
                     if (method_exists($entry, 'isCurrentlyPresent') && $entry->isCurrentlyPresent()) {
                         // Ensure getCurrentWorkplace exists and returns something
                         if (method_exists($entry, 'getCurrentWorkplace')) {
                             $workplace = $entry->getCurrentWorkplace();
-                            return '<span class="badge bg-success">Present at ' . ($workplace->name ?? 'Unknown') . '</span>';
+                            return '<span class="badge bg-success">' . __('Present at ') . ($workplace->name ?? __('Unknown')) . '</span>';
                         }
                     }
 
-                    return '<span class="badge bg-secondary">Not Present</span>';
+                    return '<span class="badge bg-secondary">' . __('Not Present') . '</span>';
                 },
                 'escaped' => false,
             ]);
@@ -153,25 +153,25 @@ class UserCrudController extends CrudController
                 'name'  => 'name',
                 'label' => trans('backpack::permissionmanager.name'),
                 'type'  => 'text',
-                'tab'   => 'User Info',
+                'tab'   => __('User Info'),
             ],
             [
                 'name'  => 'email',
                 'label' => trans('backpack::permissionmanager.email'),
                 'type'  => 'email',
-                'tab'   => 'User Info',
+                'tab'   => __('User Info'),
             ],
             [
                 'name'  => 'password',
                 'label' => trans('backpack::permissionmanager.password'),
                 'type'  => 'password',
-                'tab'   => 'User Info',
+                'tab'   => __('User Info'),
             ],
             [
                 'name'  => 'password_confirmation',
                 'label' => trans('backpack::permissionmanager.password_confirmation'),
                 'type'  => 'password',
-                'tab'   => 'User Info',
+                'tab'   => __('User Info'),
             ],
         ]);
 
@@ -182,7 +182,7 @@ class UserCrudController extends CrudController
             'field_unique_name' => 'user_role_permission',
             'type'              => 'checklist_dependency',
             'name'              => 'roles,permissions',
-            'tab'               => 'Roles & Permissions',
+            'tab'               => __('Roles & Permissions'),
             'subfields'         => [
                 'primary' => [
                     'label'            => trans('backpack::permissionmanager.roles'),
@@ -212,76 +212,76 @@ class UserCrudController extends CrudController
             // Tab: Workplace
             $this->crud->addField([
                 'name' => 'default_workplace_id',
-                'label' => 'Default Workplace',
+                'label' => __('Default Workplace'),
                 'type' => 'relationship',
                 'entity' => 'defaultWorkplace',
                 'attribute' => 'name',
                 'model' => \App\Models\Workplace::class,
-                'tab' => 'Workplace',
+                'tab' => __('Workplace'),
             ]);
 
             $this->crud->addField([
                 'name' => 'employee_id',
-                'label' => 'Employee ID',
+                'label' => __('Employee ID'),
                 'type' => 'text',
-                'tab' => 'Workplace',
+                'tab' => __('Workplace'),
             ]);
 
             $this->crud->addField([
                 'name' => 'department',
-                'label' => 'Department',
+                'label' => __('Department'),
                 'type' => 'relationship',
                 'entity' => 'department',
                 'attribute' => 'name',
                 'model' => \App\Models\Department::class,
-                'tab' => 'Workplace',
+                'tab' => __('Workplace'),
             ]);
 
             $this->crud->addField([
                 'name' => 'workplace_enter_code',
-                'label' => 'Workplace Enter Code',
+                'label' => __('Workplace Enter Code'),
                 'type' => 'text',
-                'tab' => 'Workplace',
+                'tab' => __('Workplace'),
             ]);
 
              $this->crud->addField([
                 'name' => 'role',
-                'label' => 'Job Role',
+                'label' => __('Job Role'),
                 'type' => 'text',
-                'hint' => 'The user\'s position or job title',
-                'tab' => 'Workplace',
+                'hint' => __('The user\'s position or job title'),
+                'tab' => __('Workplace'),
             ]);
 
             // Tab: Legal Details
             // Romanian Legal Fields
             $this->crud->addField([
                 'name' => 'address',
-                'label' => 'Address',
+                'label' => __('Address'),
                 'type' => 'textarea',
-                'tab' => 'Legal Details',
+                'tab' => __('Legal Details'),
             ]);
 
             $this->crud->addField([
                 'name' => 'id_document_type',
-                'label' => 'ID Document Type',
+                'label' => __('ID Document Type'),
                 'type' => 'select_from_array',
                 'options' => ['CI' => 'CI', 'BI' => 'BI', 'Pasaport' => 'Pasaport'],
                 'allows_null' => true,
-                'tab' => 'Legal Details',
+                'tab' => __('Legal Details'),
             ]);
 
             $this->crud->addField([
                 'name' => 'id_document_number',
-                'label' => 'ID Document Number',
+                'label' => __('ID Document Number'),
                 'type' => 'text',
-                'tab' => 'Legal Details',
+                'tab' => __('Legal Details'),
             ]);
 
             $this->crud->addField([
                 'name' => 'personal_numeric_code',
-                'label' => 'Personal Numeric Code (CNP)',
+                'label' => __('Personal Numeric Code (CNP)'),
                 'type' => 'text',
-                'tab' => 'Legal Details',
+                'tab' => __('Legal Details'),
             ]);
         }
     }

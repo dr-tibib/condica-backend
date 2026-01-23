@@ -26,7 +26,7 @@ class PresenceEventCrudController extends CrudController
     {
         CRUD::setModel(\App\Models\PresenceEvent::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/presence-event');
-        CRUD::setEntityNameStrings('presence event', 'presence events');
+        CRUD::setEntityNameStrings(__('presence event'), __('presence events'));
 
         // Read-only: disable create, update, and delete
         CRUD::denyAccess(['create', 'update', 'delete']);
@@ -42,12 +42,12 @@ class PresenceEventCrudController extends CrudController
     protected function setupListOperation()
     {
         // Columns
-        CRUD::column('user')->type('relationship')->label('User')->attribute('name');
+        CRUD::column('user')->type('relationship')->label(__('User'))->attribute('name');
 
-        CRUD::column('workplace')->type('relationship')->label('Workplace')->attribute('name');
+        CRUD::column('workplace')->type('relationship')->label(__('Workplace'))->attribute('name');
 
         CRUD::column('event_type')
-            ->label('Event Type')
+            ->label(__('Event Type'))
             ->type('closure')
             ->function(function ($entry) {
                 $badge = $entry->event_type === 'check_in' ? 'bg-success' : 'bg-info';
@@ -57,10 +57,10 @@ class PresenceEventCrudController extends CrudController
             })
             ->escaped(false);
 
-        CRUD::column('event_time')->label('Time')->type('datetime')->format('Y-MM-DD HH:mm:ss');
+        CRUD::column('event_time')->label(__('Time'))->type('datetime')->format('Y-MM-DD HH:mm:ss');
 
         CRUD::column('method')
-            ->label('Method')
+            ->label(__('Method'))
             ->type('closure')
             ->function(function ($entry) {
                 $badge = $entry->method === 'auto' ? 'bg-primary' : 'bg-secondary';
@@ -70,7 +70,7 @@ class PresenceEventCrudController extends CrudController
             ->escaped(false);
 
         CRUD::column('duration')
-            ->label('Duration')
+            ->label(__('Duration'))
             ->type('closure')
             ->function(function ($entry) {
                 $duration = $entry->getDurationMinutes();
@@ -84,11 +84,11 @@ class PresenceEventCrudController extends CrudController
             });
 
         CRUD::column('pair_event')
-            ->label('Paired Event')
+            ->label(__('Paired Event'))
             ->type('closure')
             ->function(function ($entry) {
                 if ($entry->pair_event_id) {
-                    return '<a href="' . backpack_url('presence-event/' . $entry->pair_event_id . '/show') . '" class="badge bg-warning">View Paired</a>';
+                    return '<a href="' . backpack_url('presence-event/' . $entry->pair_event_id . '/show') . '" class="badge bg-warning">' . __('View Paired') . '</a>';
                 }
 
                 return '-';
@@ -97,7 +97,7 @@ class PresenceEventCrudController extends CrudController
 
         // Filters
         CRUD::filter('user')
-            ->label('User')
+            ->label(__('User'))
             ->type('select2')
             ->values(function () {
                 return \App\Models\User::all()->pluck('name', 'id')->toArray();
@@ -107,7 +107,7 @@ class PresenceEventCrudController extends CrudController
             });
 
         CRUD::filter('workplace')
-            ->label('Workplace')
+            ->label(__('Workplace'))
             ->type('select2')
             ->values(function () {
                 return \App\Models\Workplace::all()->pluck('name', 'id')->toArray();
@@ -117,29 +117,29 @@ class PresenceEventCrudController extends CrudController
             });
 
         CRUD::filter('event_type')
-            ->label('Event Type')
+            ->label(__('Event Type'))
             ->type('select2')
             ->values([
-                'check_in' => 'Check In',
-                'check_out' => 'Check Out',
+                'check_in' => __('Check In'),
+                'check_out' => __('Check Out'),
             ])
             ->whenActive(function ($value) {
                 CRUD::addClause('where', 'event_type', $value);
             });
 
         CRUD::filter('method')
-            ->label('Method')
+            ->label(__('Method'))
             ->type('select2')
             ->values([
-                'auto' => 'Automatic',
-                'manual' => 'Manual',
+                'auto' => __('Automatic'),
+                'manual' => __('Manual'),
             ])
             ->whenActive(function ($value) {
                 CRUD::addClause('where', 'method', $value);
             });
 
         CRUD::filter('date_range')
-            ->label('Date Range')
+            ->label(__('Date Range'))
             ->type('date_range')
             ->whenActive(function ($values) {
                 $dates = json_decode($values);
@@ -170,7 +170,18 @@ class PresenceEventCrudController extends CrudController
             $file = fopen('php://output', 'w');
 
             // Headers
-            fputcsv($file, ['ID', 'User', 'Workplace', 'Event Type', 'Event Time', 'Method', 'Duration (minutes)', 'Latitude', 'Longitude', 'Notes']);
+            fputcsv($file, [
+                __('ID'),
+                __('User'),
+                __('Workplace'),
+                __('Event Type'),
+                __('Event Time'),
+                __('Method'),
+                __('Duration (minutes)'),
+                __('Latitude'),
+                __('Longitude'),
+                __('Notes')
+            ]);
 
             // Data
             foreach ($entries as $entry) {
