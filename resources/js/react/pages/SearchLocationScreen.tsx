@@ -1,18 +1,20 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import GooglePlacesAutocomplete, { geocodeByPlaceId, getLatLng } from 'react-google-places-autocomplete';
 
 const SearchLocationScreen = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const locationState = useLocation();
+    const user = locationState.state?.user;
 
     const handleBack = () => {
-        navigate('/delegation-locations');
+        navigate('/delegation-locations', { state: { user } });
     };
 
     const handleSelectLocation = (location: any) => {
-        navigate('/confirm-location', { state: { location } });
+        navigate('/confirm-location', { state: { location, user } });
     };
 
     const handleSelect = async (value: any) => {
