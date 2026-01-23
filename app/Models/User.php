@@ -13,6 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Stancl\Tenancy\Contracts\Syncable;
+use Illuminate\Database\Eloquent\Builder;
 
 class User extends Authenticatable implements Syncable
 {
@@ -114,6 +115,19 @@ class User extends Authenticatable implements Syncable
     }
 
     /**
+     * Get the latest presence event for this user.
+     */
+    public function latestCheckinCheckoutPresenceEvent(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(PresenceEvent::class)
+            ->ofMany([
+                'event_time' => 'max'
+            ], function (Builder $query) {
+                $query->whereIn('event_type', ['check_in', 'check_out']);
+            });
+    }
+
+    /**
      * Get the latest check-in event for this user.
      */
     public function latestCheckIn(): \Illuminate\Database\Eloquent\Relations\HasOne
@@ -159,9 +173,9 @@ class User extends Authenticatable implements Syncable
      */
     public function isCurrentlyPresent(): bool
     {
-        $latestEvent = $this->latestPresenceEvent;
+        $latestEvent = $this->latestCheckinCheckoutPresenceEvent;
 
-        return $latestEvent && in_array($latestEvent->event_type, ['check_in', 'delegation_start']);
+        return $latestEvent && in_array($latestEvent->event_type, ['check_in']);
     }
 
     /**
@@ -173,7 +187,7 @@ class User extends Authenticatable implements Syncable
             return null;
         }
 
-        return $this->latestPresenceEvent->workplace;
+        return $this->latestCheckinCheckoutPresenceEvent->workplace;
     }
 
     /**
