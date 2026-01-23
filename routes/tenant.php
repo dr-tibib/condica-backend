@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\API\ConfigController;
+use App\Http\Controllers\API\DelegationController;
 use App\Http\Controllers\API\KioskController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
@@ -39,6 +40,10 @@ Route::middleware([
 
     Route::prefix('kiosk')->group(function () {
         Route::post('/submit-code', [KioskController::class, 'submitCode']);
-        Route::post('/delegation', [KioskController::class, 'startDelegation']);
+    });
+
+    Route::prefix('delegations')->group(function () {
+        Route::get('/', [DelegationController::class, 'index']);
+        Route::post('/', [DelegationController::class, 'store']);
     });
 });

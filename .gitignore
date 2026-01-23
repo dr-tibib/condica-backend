@@ -24,3 +24,4 @@ Thumbs.db
 /database/tenanttest*
 coverage/
 /storage/tenanttest*
+/database/*.sqlite

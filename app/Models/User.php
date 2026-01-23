@@ -119,7 +119,7 @@ class User extends Authenticatable implements Syncable
     public function latestCheckIn(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(PresenceEvent::class)
-            ->where('event_type', 'check_in')
+            ->whereIn('event_type', ['check_in', 'delegation_start'])
             ->latestOfMany('event_time');
     }
 
@@ -129,7 +129,7 @@ class User extends Authenticatable implements Syncable
     public function latestCheckOut(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(PresenceEvent::class)
-            ->where('event_type', 'check_out')
+            ->whereIn('event_type', ['check_out', 'delegation_end'])
             ->latestOfMany('event_time');
     }
 
@@ -161,7 +161,7 @@ class User extends Authenticatable implements Syncable
     {
         $latestEvent = $this->latestPresenceEvent;
 
-        return $latestEvent?->event_type === 'check_in';
+        return $latestEvent && in_array($latestEvent->event_type, ['check_in', 'delegation_start']);
     }
 
     /**
@@ -216,9 +216,9 @@ class User extends Authenticatable implements Syncable
         $currentCheckIn = null;
 
         foreach ($events as $event) {
-            if ($event->event_type === 'check_in') {
+            if ($event->isCheckIn()) {
                 $currentCheckIn = $event;
-            } elseif ($event->event_type === 'check_out' && $currentCheckIn !== null) {
+            } elseif ($event->isCheckOut() && $currentCheckIn !== null) {
                 $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes($event->event_time);
                 $currentCheckIn = null;
             }
