@@ -19,54 +19,7 @@
 
     {{-- Stats Cards --}}
     <div class="row row-cards mb-4">
-        {{-- Currently On Shift --}}
-        <div class="col-sm-6 col-lg-3">
-            <div class="card card-sm border-start-3 border-start-success">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="subheader">Currently On Shift</div>
-                    </div>
-                    <div class="h1 mb-1">{{ $stats['on_shift'] }}</div>
-                    <div class="text-success small">Active Now</div>
-                </div>
-            </div>
-        </div>
-        {{-- On Delegation --}}
-        <div class="col-sm-6 col-lg-3">
-            <div class="card card-sm border-start-3 border-start-primary">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="subheader">On Delegation</div>
-                    </div>
-                    <div class="h1 mb-1">{{ $stats['on_delegation'] }}</div>
-                    <div class="text-primary small">Off-site work</div>
-                </div>
-            </div>
-        </div>
-        {{-- Absent / Late --}}
-        <div class="col-sm-6 col-lg-3">
-            <div class="card card-sm border-start-3 border-start-danger">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="subheader">Absent / Late</div>
-                    </div>
-                    <div class="h1 mb-1">{{ $stats['absent'] }}</div>
-                    <div class="text-danger small">Requires Attention</div>
-                </div>
-            </div>
-        </div>
-        {{-- Upcoming Time-Off --}}
-        <div class="col-sm-6 col-lg-3">
-            <div class="card card-sm border-start-3 border-start-warning">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="subheader">Upcoming Time-Off</div>
-                    </div>
-                    <div class="h1 mb-1">{{ $stats['upcoming_leave'] }}</div>
-                    <div class="text-muted small">Next 7 Days</div>
-                </div>
-            </div>
-        </div>
+        @include(backpack_view('inc.widgets'), [ 'widgets' => app('widgets')->where('section', 'stats')->toArray() ])
     </div>
 
     <div class="row">
