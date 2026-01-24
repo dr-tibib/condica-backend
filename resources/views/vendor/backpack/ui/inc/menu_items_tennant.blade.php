@@ -1,4 +1,5 @@
 <li class="nav-item"><a class="nav-link" href="{{ backpack_url('dashboard') }}"><i class="la la-home nav-icon"></i> {{ trans('backpack::base.dashboard') }}</a></li>
+<x-backpack::menu-item title="Team Command Center" icon="la la-tachometer" :link="backpack_url('team-command-center')" />
 <x-backpack::menu-item title="Workplace Presence" icon="la la-question" :link="backpack_url('workplace-presence')" />
 <x-backpack::menu-item title="Presence events" icon="la la-question" :link="backpack_url('presence-event')" />
 <x-backpack::menu-item title="Workplaces" icon="la la-question" :link="backpack_url('workplace')" />

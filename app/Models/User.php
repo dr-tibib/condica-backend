@@ -99,6 +99,14 @@ class User extends Authenticatable implements Syncable
     }
 
     /**
+     * Get all leave requests for this user.
+     */
+    public function leaveRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(LeaveRequest::class);
+    }
+
+    /**
      * Get all presence events for this user.
      */
     public function presenceEvents(): \Illuminate\Database\Eloquent\Relations\HasMany
