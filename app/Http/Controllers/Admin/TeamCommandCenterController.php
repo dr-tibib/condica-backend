@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Workplace;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\Widget;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -185,48 +186,84 @@ class TeamCommandCenterController extends CrudController
     public function index()
     {
         // --------------------------
-        // 1. Stats
+        // 1. Stats Calculation
         // --------------------------
         $today = Carbon::today();
 
-        // On Shift: Users with a check_in today and no subsequent check_out
-        $usersOnShiftCount = User::whereHas('latestPresenceEvent', function ($query) use ($today) {
-            $query->where('event_type', 'check_in')
+        // Baseline: Total Employees
+        $totalEmployees = User::count();
+
+        // On Leave Today
+        $onLeaveTodayCount = User::whereHas('leaveRequests', function($q) use ($today) {
+            $q->where('status', 'APPROVED')
+              ->where('start_date', '<=', $today)
+              ->where('end_date', '>=', $today);
+        })->count();
+
+        $employeesNotOnLeave = $totalEmployees - $onLeaveTodayCount;
+
+        // Working Now (On Shift + Delegation)
+        // User has latest event as check_in or delegation_start today
+        $workingNowCount = User::whereHas('latestPresenceEvent', function ($query) use ($today) {
+            $query->whereIn('event_type', ['check_in', 'delegation_start'])
                   ->where('event_time', '>=', $today);
         })->count();
 
-        // On Delegation: Users with delegation_start today or ongoing
-        $usersOnDelegationCount = User::whereHas('latestPresenceEvent', function ($query) {
-            $query->where('event_type', 'delegation_start');
+        // On Delegation Only
+        $onDelegationCount = User::whereHas('latestPresenceEvent', function ($query) use ($today) {
+            $query->where('event_type', 'delegation_start')
+                  ->where('event_time', '>=', $today);
         })->count();
 
-        // Absent / Late: Active users who are NOT present today AND NOT on approved leave
-        $totalActiveUsers = User::count();
+        // Absent / Late
+        // Not on leave AND Not working now
+        $absentCount = max(0, $employeesNotOnLeave - $workingNowCount);
 
-        $usersWithPresenceOrLeaveCount = User::where(function($query) use ($today) {
-            $query->whereHas('presenceEvents', function ($q) use ($today) {
-                $q->where('event_time', '>=', $today);
-            })->orWhereHas('leaveRequests', function($q) use ($today) {
-                 $q->where('status', 'APPROVED')
-                   ->where('start_date', '<=', $today)
-                   ->where('end_date', '>=', $today);
-            });
-        })->count();
-
-        $absentCount = $totalActiveUsers - $usersWithPresenceOrLeaveCount;
-
-        // Upcoming Time-Off (Next 7 Days)
+        // Upcoming Time Off (Next 7 Days)
         $upcomingLeaveCount = LeaveRequest::where('status', 'APPROVED')
             ->where('start_date', '>=', $today)
             ->where('start_date', '<=', $today->copy()->addDays(7))
             ->count();
 
-        $this->data['stats'] = [
-            'on_shift' => $usersOnShiftCount,
-            'on_delegation' => $usersOnDelegationCount,
-            'absent' => $absentCount,
-            'upcoming_leave' => $upcomingLeaveCount,
-        ];
+        // --------------------------
+        // 2. Add Widgets
+        // --------------------------
+
+        // Widget 1: On Shift
+        Widget::add()->to('stats')->type('progress_white')
+            ->wrapper(['class' => 'col-sm-6 col-lg-3'])
+            ->value($workingNowCount)
+            ->description('On Shift')
+            ->progress($employeesNotOnLeave > 0 ? round(($workingNowCount / $employeesNotOnLeave) * 100) : 0)
+            ->progressClass('progress-bar bg-success')
+            ->hint('Total available: ' . $employeesNotOnLeave);
+
+        // Widget 2: On Delegation
+        Widget::add()->to('stats')->type('progress_white')
+            ->wrapper(['class' => 'col-sm-6 col-lg-3'])
+            ->value($onDelegationCount)
+            ->description('On Delegation')
+            ->progress($workingNowCount > 0 ? round(($onDelegationCount / $workingNowCount) * 100) : 0)
+            ->progressClass('progress-bar bg-primary')
+            ->hint('Of working staff: ' . $workingNowCount);
+
+        // Widget 3: Absent / Late
+        Widget::add()->to('stats')->type('progress_white')
+            ->wrapper(['class' => 'col-sm-6 col-lg-3'])
+            ->value($absentCount)
+            ->description('Absent / Late')
+            ->progress($employeesNotOnLeave > 0 ? round(($absentCount / $employeesNotOnLeave) * 100) : 0)
+            ->progressClass('progress-bar bg-danger')
+            ->hint('Unaccounted for.');
+
+        // Widget 4: Upcoming Time Off
+        Widget::add()->to('stats')->type('progress_white')
+            ->wrapper(['class' => 'col-sm-6 col-lg-3'])
+            ->value($upcomingLeaveCount)
+            ->description('Upcoming Time Off')
+            ->progress($totalEmployees > 0 ? round(($upcomingLeaveCount / $totalEmployees) * 100) : 0)
+            ->progressClass('progress-bar bg-warning')
+            ->hint('Next 7 Days.');
 
         // --------------------------
         // 3. Action Center
@@ -246,7 +283,7 @@ class TeamCommandCenterController extends CrudController
         $understaffed = false;
         $targetStaff = 4; // Configurable ideally
         $now = Carbon::now();
-        if ($usersOnShiftCount < $targetStaff && $now->hour >= 9 && $now->hour < 17) {
+        if ($workingNowCount < $targetStaff && $now->hour >= 9 && $now->hour < 17) {
             $understaffed = true;
         }
 
@@ -268,7 +305,7 @@ class TeamCommandCenterController extends CrudController
             'delegation_requests' => $delegationRequests,
             'understaffed' => $understaffed,
             'target_staff' => $targetStaff,
-            'current_staff' => $usersOnShiftCount,
+            'current_staff' => $workingNowCount,
             'overtime_count' => $overtimeCount,
         ];
 
