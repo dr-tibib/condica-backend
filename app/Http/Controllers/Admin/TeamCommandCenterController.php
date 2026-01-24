@@ -5,21 +5,185 @@ namespace App\Http\Controllers\Admin;
 use App\Models\LeaveRequest;
 use App\Models\User;
 use App\Models\Workplace;
-use Backpack\CRUD\app\Http\Controllers\AdminController;
+use Backpack\CRUD\app\Http\Controllers\CrudController;
+use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
-class TeamCommandCenterController extends AdminController
+class TeamCommandCenterController extends CrudController
 {
-    public function dashboard()
-    {
-        $request = request();
-        $this->data['title'] = 'Team Command Center';
-        $this->data['breadcrumbs'] = [
-            trans('backpack::crud.admin') => backpack_url('dashboard'),
-            'Team Command Center' => false,
-        ];
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
 
+    public function setup()
+    {
+        CRUD::setModel(\App\Models\User::class);
+        CRUD::setRoute(config('backpack.base.route_prefix') . '/team-command-center');
+        CRUD::setEntityNameStrings('team command center', 'team command center');
+    }
+
+    public function setupListOperation()
+    {
+        // Eager loading
+        $today = Carbon::today();
+        $this->crud->with([
+            'latestPresenceEvent.workplace',
+            'department',
+            'presenceEvents' => function($q) use ($today) {
+                $q->where('event_time', '>=', $today)->orderBy('event_time');
+            },
+            'leaveRequests' => function($q) use ($today) {
+                $q->where('status', 'APPROVED')
+                  ->where('start_date', '<=', $today)
+                  ->where('end_date', '>=', $today);
+            }
+        ]);
+
+        // Columns
+        // 1. Employee
+        $this->crud->addColumn([
+            'name' => 'employee_details',
+            'label' => 'Employee',
+            'type' => 'closure',
+            'function' => function($entry) {
+                $avatarUrl = $entry->avatar_url ?? '';
+                $initial = substr($entry->name, 0, 1);
+                $deptName = $entry->department->name ?? 'No Dept';
+
+                return '
+                <div class="d-flex py-1 align-items-center">
+                    <span class="avatar me-2" style="background-image: url('.$avatarUrl.')">
+                        '.$initial.'
+                    </span>
+                    <div class="flex-fill">
+                        <div class="font-weight-medium">'.$entry->name.'</div>
+                        <div class="text-muted"><a href="#" class="text-reset">'.$deptName.'</a></div>
+                    </div>
+                </div>';
+            },
+            'searchLogic' => function ($query, $column, $searchTerm) {
+                $query->orWhere('name', 'like', '%'.$searchTerm.'%');
+                $query->orWhere('email', 'like', '%'.$searchTerm.'%');
+            },
+            'escaped' => false,
+        ]);
+
+        // 2. Live Status
+        $this->crud->addColumn([
+            'name' => 'live_status',
+            'label' => 'Live Status',
+            'type' => 'closure',
+            'function' => function($entry) {
+                $latestEvent = $entry->latestPresenceEvent;
+                $approvedLeave = $entry->leaveRequests->first();
+
+                $status = 'Absent';
+                $statusClass = 'danger';
+
+                if ($approvedLeave) {
+                    $status = 'On Leave';
+                    $statusClass = 'secondary';
+                } elseif ($latestEvent) {
+                    if ($latestEvent->event_type === 'check_in') {
+                         if ($latestEvent->event_time->isToday()) {
+                             $status = 'Active';
+                             $statusClass = 'success';
+                         }
+                    } elseif ($latestEvent->event_type === 'delegation_start') {
+                        $status = 'In Delegation';
+                        $statusClass = 'primary';
+                    }
+                }
+
+                return '<span class="badge bg-'.$statusClass.'-lt">● '.$status.'</span>';
+            },
+            'escaped' => false,
+        ]);
+
+        // 3. Location
+        $this->crud->addColumn([
+            'name' => 'location',
+            'label' => 'Location',
+            'type' => 'closure',
+            'function' => function($entry) {
+                $latestEvent = $entry->latestPresenceEvent;
+                $approvedLeave = $entry->leaveRequests->first();
+
+                // Re-derive status to determine location
+                $status = 'Absent';
+                if ($approvedLeave) {
+                    $status = 'On Leave';
+                } elseif ($latestEvent) {
+                    if ($latestEvent->event_type === 'check_in') {
+                        if ($latestEvent->event_time->isToday()) {
+                            $status = 'Active';
+                        }
+                    } elseif ($latestEvent->event_type === 'delegation_start') {
+                        $status = 'In Delegation';
+                    }
+                }
+
+                $location = '-';
+                if ($status === 'Active' && $latestEvent && $latestEvent->workplace) {
+                    $location = $latestEvent->workplace->name;
+                } elseif ($status === 'In Delegation') {
+                    $location = 'Delegation Site';
+                } elseif ($status === 'Active' && $latestEvent && !$latestEvent->workplace_id) {
+                    $location = 'Remote';
+                }
+
+                return $location;
+            }
+        ]);
+
+        // 4. Shift
+        $this->crud->addColumn([
+            'name' => 'shift',
+            'label' => 'Shift',
+            'type' => 'closure',
+            'function' => function($entry) {
+                return '<span class="text-muted">09:00 - 17:00</span>';
+            },
+            'escaped' => false,
+        ]);
+
+        // 5. Actual Hours
+        $this->crud->addColumn([
+            'name' => 'actual_hours',
+            'label' => 'Actual Hours',
+            'type' => 'closure',
+            'function' => function($entry) {
+                $eventsToday = $entry->presenceEvents;
+                $minutes = $this->calculateMinutesFromEvents($eventsToday);
+                $hours = floor($minutes / 60);
+                $min = $minutes % 60;
+                return sprintf('%dh %02dm', $hours, $min);
+            }
+        ]);
+
+        // 6. Trend
+        $this->crud->addColumn([
+            'name' => 'trend',
+            'label' => 'Trend (7D)',
+            'type' => 'closure',
+            'function' => function($entry) {
+                 return '<span class="text-success">100% On Time</span>';
+            },
+            'escaped' => false,
+        ]);
+
+        // Remove default operations/buttons that shouldn't be here
+        $this->crud->removeButton('create');
+        $this->crud->removeButton('update');
+        $this->crud->removeButton('delete');
+        $this->crud->removeButton('show');
+
+        // Also remove line buttons if any were added by default (ListOperation adds edit/delete/show usually)
+        // Since we are not using standard columns that might trigger buttons, but CrudController might.
+        $this->crud->removeAllButtons();
+    }
+
+    public function index()
+    {
         // --------------------------
         // 1. Stats
         // --------------------------
@@ -65,91 +229,6 @@ class TeamCommandCenterController extends AdminController
         ];
 
         // --------------------------
-        // 2. Roster (Live List)
-        // --------------------------
-        $query = User::query()->with([
-            'latestPresenceEvent.workplace',
-            'department',
-            'presenceEvents' => function($q) use ($today) {
-                $q->where('event_time', '>=', $today)->orderBy('event_time');
-            },
-            'leaveRequests' => function($q) use ($today) {
-                $q->where('status', 'APPROVED')
-                  ->where('start_date', '<=', $today)
-                  ->where('end_date', '>=', $today);
-            }
-        ]);
-
-        if ($request->has('search')) {
-            $term = $request->input('search');
-            $query->where('name', 'like', '%' . $term . '%')
-                  ->orWhere('email', 'like', '%' . $term . '%');
-        }
-
-        $users = $query->get();
-
-        $roster = $users->map(function ($user) {
-            $latestEvent = $user->latestPresenceEvent;
-            $eventsToday = $user->presenceEvents;
-            $approvedLeave = $user->leaveRequests->first();
-
-            // Determine Status
-            $status = 'Absent';
-            $statusClass = 'danger'; // Red
-            $location = '-';
-
-            if ($approvedLeave) {
-                $status = 'On Leave';
-                $statusClass = 'secondary'; // Grey
-            } elseif ($latestEvent) {
-                if ($latestEvent->event_type === 'check_in') {
-                    if ($latestEvent->event_time->isToday()) {
-                        $status = 'Active';
-                        $statusClass = 'success'; // Green
-                    }
-                } elseif ($latestEvent->event_type === 'delegation_start') {
-                    $status = 'In Delegation';
-                    $statusClass = 'primary'; // Purple/Blue
-                }
-            }
-
-            // Determine Location
-            if ($status === 'Active' && $latestEvent && $latestEvent->workplace) {
-                $location = $latestEvent->workplace->name;
-            } elseif ($status === 'In Delegation') {
-                $location = 'Delegation Site';
-            } elseif ($status === 'Active' && $latestEvent && !$latestEvent->workplace_id) {
-                $location = 'Remote';
-            }
-
-            // Calculate Actual Hours
-            $minutes = $this->calculateMinutesFromEvents($eventsToday);
-            $hours = floor($minutes / 60);
-            $min = $minutes % 60;
-            $actualHours = sprintf('%dh %02dm', $hours, $min);
-
-            // Trend (Mocked)
-            $trend = '100% On Time';
-            $trendClass = 'success';
-
-            // Shift (Mocked)
-            $shift = '09:00 - 17:00';
-
-            return [
-                'user' => $user,
-                'status' => $status,
-                'status_class' => $statusClass,
-                'location' => $location,
-                'shift' => $shift,
-                'actual_hours' => $actualHours,
-                'trend' => $trend,
-                'trend_class' => $trendClass,
-            ];
-        });
-
-        $this->data['roster'] = $roster;
-
-        // --------------------------
         // 3. Action Center
         // --------------------------
         // Time Off Requests
@@ -172,6 +251,12 @@ class TeamCommandCenterController extends AdminController
         }
 
         // Overtime: Check users with > 8h today
+        $users = User::query()->with([
+            'presenceEvents' => function($q) use ($today) {
+                $q->where('event_time', '>=', $today)->orderBy('event_time');
+            }
+        ])->get();
+
         $overtimeCount = $users->filter(function($u) {
             $events = $u->presenceEvents; // Already filtered for today
             $mins = $this->calculateMinutesFromEvents($events);
@@ -185,6 +270,12 @@ class TeamCommandCenterController extends AdminController
             'target_staff' => $targetStaff,
             'current_staff' => $usersOnShiftCount,
             'overtime_count' => $overtimeCount,
+        ];
+
+        $this->data['title'] = 'Team Command Center';
+        $this->data['breadcrumbs'] = [
+            trans('backpack::crud.admin') => backpack_url('dashboard'),
+            'Team Command Center' => false,
         ];
 
         return view('admin.dashboard.team_command_center', $this->data);

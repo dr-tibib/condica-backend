@@ -25,7 +25,7 @@ Route::group([
     Route::crud('leave-type', 'LeaveTypeCrudController');
     Route::crud('public-holiday', 'PublicHolidayCrudController');
     Route::crud('leave-request', 'LeaveRequestCrudController');
-    Route::get('team-command-center', 'TeamCommandCenterController@dashboard')->name('admin.team_command_center');
+    Route::crud('team-command-center', 'TeamCommandCenterController');
     Route::get('dashboard', 'EmployeeDashboardController@dashboard')->name('backpack.dashboard');
 }); // this should be the absolute last line of this file
 
