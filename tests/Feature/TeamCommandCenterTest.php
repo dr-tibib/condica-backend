@@ -86,4 +86,21 @@ class TeamCommandCenterTest extends TenantTestCase
         $response->assertSee('progress-bar bg-danger');
         $response->assertSee('progress-bar bg-warning');
     }
+
+    public function test_attendance_sheet_view_renders_correctly()
+    {
+        // Authenticate
+        $admin = User::factory()->create(['is_global_superadmin' => true]);
+
+        $url = 'http://' . $this->tenant->domains->first()->domain . '/admin/team-command-center/export';
+
+        $response = $this->actingAs($admin, 'web')->get($url);
+
+        $response->assertStatus(200);
+        $response->assertViewIs('admin.reports.attendance_sheet');
+
+        // Assert some view content to ensure it's the right file and basic structure is there
+        $response->assertSee('FOAIA COLECTIVĂ DE PREZENȚĂ');
+        $response->assertSee('Nume și Prenume');
+    }
 }
