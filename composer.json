@@ -16,11 +16,13 @@
         "backpack/pro": "^3.0",
         "backpack/settings": "^3.2",
         "backpack/theme-tabler": "^2.0",
+        "barryvdh/laravel-dompdf": "*",
         "laravel-lang/common": "*",
         "laravel-lang/publisher": "*",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10.1",
+        "maatwebsite/excel": "*",
         "stancl/tenancy": "^3.9"
     },
     "require-dev": {

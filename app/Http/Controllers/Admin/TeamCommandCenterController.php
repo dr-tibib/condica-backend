@@ -7,9 +7,12 @@ use App\Models\User;
 use App\Models\Workplace;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use App\Exports\AttendanceSheetExport;
 use Backpack\CRUD\app\Library\Widget;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TeamCommandCenterController extends CrudController
 {
@@ -318,6 +321,135 @@ class TeamCommandCenterController extends CrudController
         return view('admin.dashboard.team_command_center', $this->data);
     }
 
+    public function generateAttendanceSheet(Request $request)
+    {
+        $date = $request->input('date') ? Carbon::parse($request->input('date')) : Carbon::now();
+        $startOfMonth = $date->copy()->startOfMonth();
+        $endOfMonth = $date->copy()->endOfMonth();
+        $daysInMonth = $date->daysInMonth;
+
+        $users = User::with([
+            'department',
+            'presenceEvents' => function($q) use ($startOfMonth, $endOfMonth) {
+                $q->whereBetween('event_time', [$startOfMonth, $endOfMonth])
+                  ->orderBy('event_time');
+            },
+            'leaveRequests' => function($q) use ($startOfMonth, $endOfMonth) {
+                $q->where('status', 'APPROVED')
+                  ->where(function($query) use ($startOfMonth, $endOfMonth) {
+                      $query->whereBetween('start_date', [$startOfMonth, $endOfMonth])
+                            ->orWhereBetween('end_date', [$startOfMonth, $endOfMonth])
+                            ->orWhere(function($sub) use ($startOfMonth, $endOfMonth) {
+                                $sub->where('start_date', '<', $startOfMonth)
+                                    ->where('end_date', '>', $endOfMonth);
+                            });
+                  });
+            }
+        ])->get();
+
+        $data = [];
+        foreach ($users as $user) {
+            $userRow = [
+                'name' => $user->name,
+                'role' => $user->department ? $user->department->name : ($user->role ?? '-'),
+                'days' => [],
+                'totals' => [
+                    'worked' => 0,
+                    'co' => 0,
+                    'cm' => 0,
+                    'cfs' => 0,
+                    'abs' => 0,
+                ]
+            ];
+
+            $totalMinutes = 0;
+
+            for ($i = 1; $i <= $daysInMonth; $i++) {
+                $currentDay = $startOfMonth->copy()->addDays($i - 1);
+                $dayVal = '';
+                $bgColor = '';
+                $isWeekend = $currentDay->isWeekend();
+
+                // Check for leave
+                $leave = $user->leaveRequests->first(function($req) use ($currentDay) {
+                    return $currentDay->between($req->start_date, $req->end_date);
+                });
+
+                if ($leave) {
+                    $code = 'CO'; // Default to Paid Leave
+                    if ($leave->leaveType) {
+                        if ($leave->leaveType->medical_code_required) {
+                            $code = 'CM';
+                            $userRow['totals']['cm']++;
+                        } elseif (! $leave->leaveType->is_paid) {
+                            $code = 'CFS';
+                            $userRow['totals']['cfs']++;
+                        } else {
+                            $userRow['totals']['co']++;
+                        }
+                    } else {
+                         $userRow['totals']['co']++;
+                    }
+                    $dayVal = $code;
+                } else {
+                    if ($isWeekend) {
+                        $dayVal = ''; // Weekends are usually empty or X
+                    } else {
+                        // Calculate hours
+                        $dayEvents = $user->presenceEvents->filter(function($e) use ($currentDay) {
+                            return $e->event_time->isSameDay($currentDay);
+                        });
+
+                        if ($dayEvents->isNotEmpty()) {
+                            // Calculate minutes for this day
+                            $minutes = $this->calculateMinutesForDay($dayEvents, $currentDay);
+                            $hours = round($minutes / 60, 1);
+                            if ($hours > 0) {
+                                $dayVal = $hours; // or 8 if standard
+                                $totalMinutes += $minutes;
+                            } else {
+                                $dayVal = ''; // Present but 0 hours?
+                            }
+                        } else {
+                            // Absent
+                            // Only mark absent if strictly required and not future
+                            if ($currentDay->isPast()) {
+                                // $dayVal = 'Abs';
+                                // $userRow['totals']['abs']++;
+                            }
+                        }
+                    }
+                }
+
+                $userRow['days'][] = [
+                    'val' => $dayVal,
+                    'is_weekend' => $isWeekend,
+                    'bg_color' => $bgColor
+                ];
+            }
+
+            $userRow['totals']['worked'] = floor($totalMinutes / 60);
+            $data[] = $userRow;
+        }
+
+        $viewData = [
+            'users' => $data,
+            'monthLabel' => $date->translatedFormat('F Y'),
+            'daysInMonth' => $daysInMonth,
+            'companyName' => $this->crud->getRequest()->user()->tenant->name ?? 'Company', // Assuming tenant
+        ];
+
+        if ($request->input('format') === 'excel') {
+            return Excel::download(new AttendanceSheetExport($viewData), 'Foaia_Colectiva_'.$date->format('Y_m').'.xlsx');
+        } elseif ($request->input('format') === 'pdf') {
+            $pdf = Pdf::loadView('admin.reports.attendance_sheet', $viewData);
+            $pdf->setPaper('a4', 'landscape');
+            return $pdf->download('Foaia_Colectiva_'.$date->format('Y_m').'.pdf');
+        }
+
+        return view('admin.reports.attendance_sheet', $viewData);
+    }
+
     private function calculateMinutesFromEvents($events)
     {
         $totalMinutes = 0;
@@ -335,6 +467,33 @@ class TeamCommandCenterController extends CrudController
         // If still checked in, calculate until now
         if ($currentCheckIn !== null) {
              $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes(Carbon::now());
+        }
+
+        return $totalMinutes;
+    }
+
+    private function calculateMinutesForDay($events, $day)
+    {
+        $totalMinutes = 0;
+        $currentCheckIn = null;
+
+        foreach ($events as $event) {
+            if ($event->event_type === 'check_in') {
+                $currentCheckIn = $event;
+            } elseif ($event->event_type === 'check_out' && $currentCheckIn !== null) {
+                $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes($event->event_time);
+                $currentCheckIn = null;
+            }
+        }
+
+        // If check-in was today but no checkout
+        if ($currentCheckIn !== null) {
+             if ($day->isToday()) {
+                 $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes(Carbon::now());
+             } else {
+                 // Open ended in past. Do not count huge hours. Count 0 to indicate error/missing checkout.
+                 // The employee must correct their timesheet.
+             }
         }
 
         return $totalMinutes;

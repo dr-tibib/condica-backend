@@ -12,10 +12,25 @@
                 <option>Engineering Dept</option>
                 <option>All Departments</option>
             </select>
-            <input type="date" class="form-control form-control-sm w-auto d-inline-block" value="{{ \Carbon\Carbon::today()->format('Y-m-d') }}">
-            <button class="btn btn-sm btn-primary">Export Report</button>
+            <input type="date" id="reportDate" class="form-control form-control-sm w-auto d-inline-block" value="{{ \Carbon\Carbon::today()->format('Y-m-d') }}">
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Foaia Colectivă de Prezență
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                    <li><a class="dropdown-item" href="#" onclick="exportAttendance('excel')">Download in Excel</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportAttendance('pdf')">Download in PDF</a></li>
+                </ul>
+            </div>
         </div>
     </div>
+
+    <script>
+        function exportAttendance(format) {
+            const date = document.getElementById('reportDate').value;
+            window.location.href = '/admin/team-command-center/export?format=' + format + '&date=' + date;
+        }
+    </script>
 
     {{-- Stats Cards --}}
     <div class="row row-cards mb-4">
