@@ -81,14 +81,20 @@ class TeamCommandCenterTest extends TenantTestCase
         $this->assertEquals(2, $stats['absent'], 'Absent count mismatch');
         $this->assertEquals(1, $stats['upcoming_leave'], 'Upcoming Leave count mismatch'); // Admin's leave
 
-        // Check Roster
-        $roster = $response->viewData('roster');
-        $this->assertCount(3, $roster);
+        // Check Roster (via Datatable Search)
+        $searchUrl = 'http://' . $domain . '/admin/team-command-center/search';
+        $searchResponse = $this->actingAs($admin)->postJson($searchUrl);
+        $searchResponse->assertStatus(200);
 
-        // Find Alice in roster
-        $aliceData = $roster->first(fn($r) => $r['user']->id === $employee1->id);
-        $this->assertEquals('Active', $aliceData['status']);
-        $this->assertEquals('1h 00m', $aliceData['actual_hours']);
+        $data = $searchResponse->json('data');
+        $this->assertCount(3, $data);
+
+        // Find Alice in data
+        // Data is indexed array: 0=Employee, 1=Status, 2=Location, 3=Shift, 4=Hours, 5=Trend
+        $aliceRow = collect($data)->first(fn($row) => str_contains($row[0], 'Alice'));
+        $this->assertNotNull($aliceRow, 'Alice not found in roster');
+        $this->assertStringContainsString('Active', $aliceRow[1]);
+        $this->assertStringContainsString('1h 00m', $aliceRow[4]);
 
         // Check Actions
         $actions = $response->viewData('actions');

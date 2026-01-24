@@ -75,64 +75,13 @@
             <div class="card">
                 <div class="card-header border-0">
                     <h3 class="card-title">Team Live Roster</h3>
-                    <div class="card-actions">
-                        <form action="" method="GET">
-                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search employee..." value="{{ request('search') }}">
-                        </form>
-                    </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-vcenter card-table">
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Live Status</th>
-                                <th>Location</th>
-                                <th>Shift</th>
-                                <th>Actual Hours</th>
-                                <th>Trend (7D)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($roster as $item)
-                            <tr>
-                                <td>
-                                    <div class="d-flex py-1 align-items-center">
-                                        {{-- Avatar --}}
-                                        <span class="avatar me-2" style="background-image: url({{ $item['user']->avatar_url ?? '' }})">
-                                            {{ substr($item['user']->name, 0, 1) }}
-                                        </span>
-                                        <div class="flex-fill">
-                                            <div class="font-weight-medium">{{ $item['user']->name }}</div>
-                                            <div class="text-muted"><a href="#" class="text-reset">{{ $item['user']->department->name ?? 'No Dept' }}</a></div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ $item['status_class'] }}-lt">● {{ $item['status'] }}</span>
-                                </td>
-                                <td>
-                                    {{ $item['location'] }}
-                                </td>
-                                <td class="text-muted">
-                                    {{ $item['shift'] }}
-                                </td>
-                                <td>
-                                    {{ $item['actual_hours'] }}
-                                </td>
-                                <td class="text-{{ $item['trend_class'] }}">
-                                    {{ $item['trend'] }}
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4">
-                                    No employees found.
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                <div class="card-body p-0">
+                    <x-bp-datatable
+                        controller="App\Http\Controllers\Admin\TeamCommandCenterController"
+                        :form-inside-card="false"
+                        :use-fixed-header="false"
+                    />
                 </div>
             </div>
         </div>
@@ -154,30 +103,10 @@
                     </div>
                     <div>
                         <a href="{{ backpack_url('leave-request/'.$request->id.'/edit') }}" class="btn btn-sm btn-success">Review</a>
-                        {{-- <button class="btn btn-sm btn-outline-secondary">Deny</button> --}}
                     </div>
                 </div>
             </div>
             @endforeach
-
-            {{-- Delegation Requests (Mock/Placeholder) --}}
-            {{--
-            <div class="card mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between mb-2">
-                        <small class="text-primary font-weight-bold">DELEGATION REQUEST</small>
-                        <small class="text-muted">5h ago</small>
-                    </div>
-                    <div class="mb-2">
-                        <strong>John D.</strong> wants to delegate tasks to <strong>Mike R.</strong>
-                    </div>
-                    <div>
-                        <button class="btn btn-sm btn-success">Approve</button>
-                        <button class="btn btn-sm btn-outline-secondary">Review</button>
-                    </div>
-                </div>
-            </div>
-            --}}
 
             {{-- Alerts --}}
             @if($actions['understaffed'])
