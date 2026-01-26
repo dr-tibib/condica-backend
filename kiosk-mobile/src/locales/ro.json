@@ -1,0 +1,65 @@
+{
+  "welcome": "Bine ați venit la {{company}}",
+  "language": "Limbă",
+  "common": {
+    "go_back": "Înapoi",
+    "back": "Înapoi",
+    "processing": "Se procesează...",
+    "cancel": "Anulare",
+    "ok": "OK"
+  },
+  "idle": {
+    "tap_to_enter": "Apasă pentru a introduce codul",
+    "delegation": "Delegație"
+  },
+  "code_entry": {
+    "title": "Introduceți codul de angajat",
+    "subtitle": "Introduceți PIN-ul de acces din {{length}} cifre",
+    "invalid_code": "Cod invalid"
+  },
+  "delegation": {
+    "where_going": "Unde mergeți?",
+    "search_placeholder": "Căutați adresă sau nume client",
+    "saved_locations": "Locații salvate"
+  },
+  "search": {
+    "select_location": "Selectați locația",
+    "search_results": "Rezultate căutare"
+  },
+  "confirm": {
+    "workplace_presence": "Prezență la locul de muncă",
+    "title": "Confirmați locația delegației",
+    "subtitle": "Vă rugăm să verificați detaliile locației de delegație înainte de a continua.",
+    "current_location": "Locația curentă",
+    "no_location": "Nicio locație selectată",
+    "save_future": "Salvează pentru viitor",
+    "remember_location": "Reține această locație pentru următorul check-in",
+    "start_delegation": "Începe delegația",
+    "delegation_failed": "Delegația a eșuat"
+  },
+  "success": {
+    "checkin": {
+      "title": "Check-in efectuat!",
+      "message": "Să aveți o zi productivă!"
+    },
+    "checkout": {
+      "title": "Check-out efectuat!",
+      "message": "Pe mâine!"
+    },
+    "delegation_start": {
+      "title": "Delegație începută!",
+      "message": "Sunteți gata pentru astăzi."
+    },
+    "delegation_end": {
+      "title": "Delegație încheiată!",
+      "message": "Bine ați revenit!"
+    },
+    "returning_home": "Se revine la ecranul principal..."
+  },
+  "error": {
+    "delegation_not_available": {
+        "title": "Delegația nu este disponibilă",
+        "message": "Nu aveți permisiuni pentru delegație. Contactați supervizorul dacă aveți nevoie de acces."
+    }
+  }
+}
