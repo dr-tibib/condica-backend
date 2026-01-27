@@ -12,24 +12,33 @@
                 <option>Engineering Dept</option>
                 <option>All Departments</option>
             </select>
-            <input type="date" id="reportDate" class="form-control form-control-sm w-auto d-inline-block" value="{{ \Carbon\Carbon::today()->format('Y-m-d') }}">
-            <div class="dropdown d-inline-block">
-                <button class="btn btn-sm btn-primary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    Foaia Colectivă de Prezență
-                </button>
-                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
-                    <li><a class="dropdown-item" href="#" onclick="exportAttendance('excel')">Download in Excel</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="exportAttendance('pdf')">Download in PDF</a></li>
-                </ul>
-            </div>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#attendanceModal">
+                Foaia Colectivă de Prezență
+            </button>
         </div>
     </div>
 
     <script>
         function exportAttendance(format) {
-            const date = document.getElementById('reportDate').value;
-            window.location.href = '/admin/team-command-center/export?format=' + format + '&date=' + date;
+            const date = document.getElementById('attendanceMonth').value;
+            if (!date) {
+                alert('Please select a month');
+                return;
+            }
+            window.location.href = '/admin/team-command-center/export?format=' + format + '&date=' + date + '-01';
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const yyyy = lastMonth.getFullYear();
+            const mm = String(lastMonth.getMonth() + 1).padStart(2, '0');
+
+            const monthInput = document.getElementById('attendanceMonth');
+            if (monthInput) {
+                monthInput.value = `${yyyy}-${mm}`;
+            }
+        });
     </script>
 
     {{-- Stats Cards --}}
@@ -109,6 +118,29 @@
             @endif
 
         </div>
+    </div>
+
+    <!-- Attendance Modal -->
+    <div class="modal fade" id="attendanceModal" tabindex="-1" aria-labelledby="attendanceModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="attendanceModalLabel">Export Foaia Colectivă de Prezență</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="attendanceMonth" class="form-label">Select Month</label>
+              <input type="month" class="form-control" id="attendanceMonth">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-success" onclick="exportAttendance('excel')">Download Excel</button>
+            <button type="button" class="btn btn-danger" onclick="exportAttendance('pdf')">Download Pdf</button>
+          </div>
+        </div>
+      </div>
     </div>
 </div>
 @endsection
