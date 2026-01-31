@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ro"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kiosk Presence Dashboard - Hidraulica</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1e40af",
+                        "background-light": "#f1f5f9",
+                        "background-dark": "#0f172a",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        mono: ["JetBrains Mono", "monospace"],
+                    },
+                },
+            },
+        };
+    </script>
+<style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100;
+                font-family: 'Inter', sans-serif;
+                width: 1024px;
+                height: 768px;
+                overflow: hidden;
+                margin: 0 auto;
+            }
+        }
+        .digital-clock span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #1e293b;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 0 1px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            min-width: 2.5rem;
+        }
+        .scroll-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scroll-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+        }
+    </style>
+</head>
+<body class="flex flex-col p-6 gap-5">
+<header class="flex justify-between items-center bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+<div class="flex items-center gap-3">
+<div class="bg-primary text-white font-black text-4xl px-3 py-1 rounded">HD</div>
+<div class="text-primary dark:text-blue-400 font-extrabold text-3xl tracking-tight uppercase">Hidraulica</div>
+</div>
+<div class="digital-clock flex items-center gap-1">
+<span id="h1">1</span><span id="h2">6</span>
+<div class="text-3xl font-bold dark:text-slate-400 mx-1">:</div>
+<span id="m1">2</span><span id="m2">1</span>
+<div class="text-3xl font-bold dark:text-slate-400 mx-1">:</div>
+<span id="s1">2</span><span id="s2">4</span>
+</div>
+</header>
+<section class="grid grid-cols-3 gap-4">
+<button class="flex items-center justify-center gap-2 py-4 bg-primary text-white rounded-xl shadow-md border-2 border-primary transition-all active:scale-95">
+<span class="material-symbols-outlined">check_circle</span>
+<span class="text-2xl font-bold">Normal</span>
+</button>
+<button class="flex items-center justify-center gap-2 py-4 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-all active:scale-95">
+<span class="material-symbols-outlined">business_center</span>
+<span class="text-2xl font-bold">Delegație</span>
+</button>
+<button class="flex items-center justify-center gap-2 py-4 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl shadow-sm border-2 border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-all active:scale-95">
+<span class="material-symbols-outlined">event_available</span>
+<span class="text-2xl font-bold">Concediu</span>
+</button>
+</section>
+<section class="flex items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+<label class="text-3xl font-bold text-slate-700 dark:text-slate-300 px-4">Cod:</label>
+<input class="flex-grow text-4xl p-4 border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-900 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all outline-none font-mono" placeholder="••••" type="password"/>
+<button class="bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-3xl font-bold py-4 px-12 rounded-xl transition-colors shadow-lg active:scale-95">
+            Validare
+        </button>
+</section>
+<div class="flex-grow grid grid-rows-2 gap-5 overflow-hidden">
+<div class="grid grid-cols-2 gap-5 h-full">
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden shadow-sm">
+<div class="bg-slate-50 dark:bg-slate-700/50 p-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center px-4">
+<span class="font-bold uppercase text-slate-500 dark:text-slate-400 text-sm tracking-wider">Ultimele logări:</span>
+<span class="material-symbols-outlined text-slate-400">history</span>
+</div>
+<div class="flex-grow overflow-y-auto scroll-hide">
+<table class="w-full text-left border-collapse">
+<tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+<td class="py-3 px-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-red-500 font-bold">logout</span>
+<span class="font-semibold">SZABÓ Lehel</span>
+</td>
+<td class="py-3 px-4 text-right font-mono text-red-500 font-bold">16:18</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+<td class="py-3 px-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-red-500 font-bold">logout</span>
+<span class="font-semibold">KÁLAI Camelia-Aurora</span>
+</td>
+<td class="py-3 px-4 text-right font-mono text-red-500 font-bold">16:17</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+<td class="py-3 px-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-500 font-bold">work_history</span>
+<span class="font-semibold">TOADER Claudiu-Ciprian</span>
+</td>
+<td class="py-3 px-4 text-right font-mono text-blue-500 font-bold">16:06</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+<td class="py-3 px-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-green-500 font-bold">login</span>
+<span class="font-semibold">ISTRATE Florin</span>
+</td>
+<td class="py-3 px-4 text-right font-mono text-green-500 font-bold">15:58</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+<td class="py-3 px-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-red-500 font-bold">logout</span>
+<span class="font-semibold">BALINT Kristof-Szilvester</span>
+</td>
+<td class="py-3 px-4 text-right font-mono text-red-500 font-bold">15:58</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden shadow-sm">
+<div class="bg-slate-50 dark:bg-slate-700/50 p-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center px-4">
+<span class="font-bold uppercase text-slate-500 dark:text-slate-400 text-sm tracking-wider">În concediu:</span>
+<span class="font-bold uppercase text-slate-500 dark:text-slate-400 text-sm tracking-wider">Până la:</span>
+</div>
+<div class="flex-grow overflow-y-auto scroll-hide">
+<table class="w-full text-left border-collapse">
+<tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+<td class="py-3 px-4 font-semibold">POPESCU Ion</td>
+<td class="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400 font-bold">25.10.2023</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden shadow-sm">
+<div class="bg-slate-100 dark:bg-slate-700/80 p-3 border-b border-slate-200 dark:border-slate-700 grid grid-cols-12 px-4">
+<div class="col-span-6 font-bold uppercase text-slate-500 dark:text-slate-400 text-sm tracking-wider">În delegație:</div>
+<div class="col-span-3 font-bold uppercase text-slate-500 dark:text-slate-400 text-sm tracking-wider">Destinație:</div>
+<div class="col-span-3 font-bold uppercase text-slate-500 dark:text-slate-400 text-sm tracking-wider text-right">Auto:</div>
+</div>
+<div class="flex-grow overflow-y-auto scroll-hide">
+<table class="w-full text-left border-collapse">
+<tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+<tr class="grid grid-cols-12 items-center hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+<td class="col-span-6 py-3 px-4 font-semibold">PĂVĂLASCU Andrei-Emil</td>
+<td class="col-span-3 py-3 px-4 font-medium text-slate-600 dark:text-slate-400">MATIKON</td>
+<td class="col-span-3 py-3 px-4 font-mono font-bold text-primary dark:text-blue-400 uppercase text-right">BV23HID</td>
+</tr>
+<tr class="grid grid-cols-12 items-center hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+<td class="col-span-6 py-3 px-4 font-semibold">POIANA Ciprian</td>
+<td class="col-span-3 py-3 px-4 font-medium text-slate-600 dark:text-slate-400">MATION</td>
+<td class="col-span-3 py-3 px-4 font-mono font-bold text-primary dark:text-blue-400 uppercase text-right">BV23HID</td>
+</tr>
+<tr class="grid grid-cols-12 items-center hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+<td class="col-span-6 py-3 px-4 font-semibold">FAZAKAS Mihály</td>
+<td class="col-span-3 py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Ghimbav</td>
+<td class="col-span-3 py-3 px-4 font-mono font-bold text-primary dark:text-blue-400 uppercase text-right">BV17HID</td>
+</tr>
+<tr class="grid grid-cols-12 items-center hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+<td class="col-span-6 py-3 px-4 font-semibold">ISTRATE Dumitru</td>
+<td class="col-span-3 py-3 px-4 font-medium text-slate-600 dark:text-slate-400">MADINGER</td>
+<td class="col-span-3 py-3 px-4 font-mono font-bold text-primary dark:text-blue-400 uppercase text-right">BV11HID</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<script>
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours().toString().padStart(2, '0');
+            const m = now.getMinutes().toString().padStart(2, '0');
+            const s = now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('h1').textContent = h[0];
+            document.getElementById('h2').textContent = h[1];
+            document.getElementById('m1').textContent = m[0];
+            document.getElementById('m2').textContent = m[1];
+            document.getElementById('s1').textContent = s[0];
+            document.getElementById('s2').textContent = s[1];
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+
+</body></html>
