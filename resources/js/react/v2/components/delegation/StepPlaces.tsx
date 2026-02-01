@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import GooglePlacesAutocomplete from 'react-google-places-autocomplete';
+import useGoogleMaps from '../../hooks/useGoogleMaps';
 
 interface Place {
   id?: number;
@@ -22,6 +23,7 @@ interface StepPlacesProps {
 const StepPlaces = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepPlacesProps) => {
   const [savedPlaces, setSavedPlaces] = useState<Place[]>([]);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const { isLoaded, loadError } = useGoogleMaps(apiKey);
 
   useEffect(() => {
     fetchSavedPlaces();
@@ -88,17 +90,22 @@ const StepPlaces = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepP
          <div className="space-y-3">
             <label className="text-sm font-bold text-slate-500 uppercase tracking-widest ml-1">Caută Destinație</label>
             <div className="relative text-black">
-                <GooglePlacesAutocomplete
-                    apiKey={apiKey}
-                    selectProps={{
-                        placeholder: 'Introduceți orașul sau firma...',
-                        onChange: handleGoogleSelect,
-                        styles: {
-                            input: (provided) => ({ ...provided, padding: '10px', fontSize: '1.25rem' }),
-                            control: (provided) => ({ ...provided, borderRadius: '1rem', padding: '5px' }),
-                        }
-                    }}
-                />
+                {isLoaded ? (
+                    <GooglePlacesAutocomplete
+                        selectProps={{
+                            placeholder: 'Introduceți orașul sau firma...',
+                            onChange: handleGoogleSelect,
+                            styles: {
+                                input: (provided) => ({ ...provided, padding: '10px', fontSize: '1.25rem' }),
+                                control: (provided) => ({ ...provided, borderRadius: '1rem', padding: '5px' }),
+                            }
+                        }}
+                    />
+                ) : (
+                    <div className="p-4 bg-slate-100 rounded-2xl text-center text-slate-500">
+                        {loadError ? 'Eroare la încărcarea hărților.' : 'Se încarcă hărțile...'}
+                    </div>
+                )}
             </div>
          </div>
 
