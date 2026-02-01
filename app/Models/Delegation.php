@@ -21,6 +21,8 @@ class Delegation extends Model
         'longitude',
         'start_event_id',
         'end_event_id',
+        'vehicle_id',
+        'delegation_place_id',
     ];
 
     protected $casts = [

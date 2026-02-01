@@ -14,6 +14,7 @@
     <script>
         window.tenant = @json([
             'company_name' => isset($tenant) ? $tenant->company_name : null,
+            'kiosk_version' => config('kiosk.version', env('KIOSK_VERSION', 'v1')),
         ]);
     </script>
     @viteReactRefresh

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\DelegationPlace;
 use App\Models\User;
+use App\Models\Vehicle;
 use App\Services\PresenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,6 +18,20 @@ class KioskController extends Controller
     public function __construct(
         private readonly PresenceService $presenceService
     ) {}
+
+    public function getVehicles(): JsonResponse
+    {
+        return response()->json([
+            'data' => Vehicle::orderBy('name')->get(),
+        ]);
+    }
+
+    public function getSavedPlaces(): JsonResponse
+    {
+        return response()->json([
+            'data' => DelegationPlace::orderBy('name')->get(),
+        ]);
+    }
 
     /**
      * Verify code and perform check-in/check-out or return user details.

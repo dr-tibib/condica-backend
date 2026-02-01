@@ -6,6 +6,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Delegation;
+use App\Models\DelegationPlace;
 use App\Models\PresenceEvent;
 use App\Models\User;
 use App\Services\PresenceService;
@@ -58,14 +59,37 @@ class DelegationController extends Controller
             'address' => ['nullable', 'string'],
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
+            'photo_reference' => ['nullable', 'string'],
+            'vehicle_id' => ['nullable', 'exists:vehicles,id'],
             'device_info' => ['nullable', 'array'],
             'workplace_id' => ['nullable', 'exists:workplaces,id'],
         ]);
 
         $user = User::findOrFail($validated['user_id']);
 
+        // Find or create DelegationPlace if Google Place ID is present
+        $delegationPlaceId = null;
+        if (!empty($validated['place_id'])) {
+            try {
+                $delegationPlace = DelegationPlace::updateOrCreate(
+                    ['google_place_id' => $validated['place_id']],
+                    [
+                        'name' => $validated['name'],
+                        'address' => $validated['address'] ?? null,
+                        'latitude' => $validated['latitude'] ?? null,
+                        'longitude' => $validated['longitude'] ?? null,
+                        'photo_reference' => $validated['photo_reference'] ?? null,
+                    ]
+                );
+                $delegationPlaceId = $delegationPlace->id;
+            } catch (\Exception $e) {
+                // Ignore errors creating delegation place, fallback to just storing in delegation table
+                Log::warning('Failed to create DelegationPlace: ' . $e->getMessage());
+            }
+        }
+
         try {
-            return DB::transaction(function () use ($user, $validated) {
+            return DB::transaction(function () use ($user, $validated, $delegationPlaceId) {
                 // 0. Auto Check-in if not present
                 if (! $user->isCurrentlyPresent()) {
                     $workplaceId = $validated['workplace_id'] ?? $user->default_workplace_id;
@@ -102,6 +126,8 @@ class DelegationController extends Controller
                     'latitude' => $validated['latitude'] ?? null,
                     'longitude' => $validated['longitude'] ?? null,
                     'start_event_id' => $event->id,
+                    'vehicle_id' => $validated['vehicle_id'] ?? null,
+                    'delegation_place_id' => $delegationPlaceId,
                 ]);
 
                 return response()->json([
