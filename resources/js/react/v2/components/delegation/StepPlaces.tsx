@@ -47,34 +47,42 @@ const StepPlaces = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepP
     }
   };
 
-  const handleGoogleSelect = (val: any) => {
+  const handleGoogleSelect = async (val: any) => {
       if (!val) return;
 
-      const service = new google.maps.places.PlacesService(document.createElement('div'));
-      service.getDetails({ placeId: val.value.place_id, fields: ['name', 'formatted_address', 'geometry', 'photos'] }, (place, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-              // Try to get a photo URL or reference
-              let photoRef = undefined;
-              if (place.photos && place.photos.length > 0) {
-                 photoRef = place.photos[0].getUrl({ maxWidth: 400 }); 
-              }
+      try {
+          const place = new google.maps.places.Place({
+              id: val.value.place_id,
+          });
 
-              const newPlace: Place = {
-                  google_place_id: val.value.place_id,
-                  name: place.name || val.label,
-                  address: place.formatted_address,
-                  latitude: place.geometry?.location?.lat(),
-                  longitude: place.geometry?.location?.lng(),
-                  photo_reference: photoRef
-              };
-              
-              // Add to selected if not exists
-               const exists = selectedPlaces.find(p => p.google_place_id === newPlace.google_place_id);
-               if (!exists) {
-                  onSelectionChange([...selectedPlaces, newPlace]);
-               }
+          // Fetch fields using the new Places API
+          await place.fetchFields({
+              fields: ['displayName', 'formattedAddress', 'location', 'photos'],
+          });
+
+          let photoRef = undefined;
+          if (place.photos && place.photos.length > 0) {
+              // Using getURI method from the new Places API Photo object
+              photoRef = place.photos[0].getURI({ maxWidth: 400 });
           }
-      });
+
+          const newPlace: Place = {
+              google_place_id: val.value.place_id,
+              name: place.displayName || val.label,
+              address: place.formattedAddress,
+              latitude: place.location?.lat(),
+              longitude: place.location?.lng(),
+              photo_reference: photoRef
+          };
+
+          // Add to selected if not exists
+           const exists = selectedPlaces.find(p => p.google_place_id === newPlace.google_place_id);
+           if (!exists) {
+              onSelectionChange([...selectedPlaces, newPlace]);
+           }
+      } catch (error) {
+          console.error('Error fetching place details:', error);
+      }
   };
 
   return (
