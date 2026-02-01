@@ -2,8 +2,9 @@
   "expo": {
     "name": "kiosk-mobile",
     "slug": "kiosk-mobile",
+    "scheme": "kiosk-mobile",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,

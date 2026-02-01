@@ -5,7 +5,7 @@ import { getAdminToken, setKioskWorkplaceId, clearAdminToken } from '../src/util
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8000/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://oaksoft-condica.lndo.site/api';
 
 interface Workplace {
   id: number;

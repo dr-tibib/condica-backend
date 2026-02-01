@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getKioskWorkplaceId } from '../src/utils/kiosk';
@@ -24,12 +24,13 @@ const IdleScreen = () => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isChecking, setIsChecking] = useState(true);
+  const [shouldRedirectToLogin, setShouldRedirectToLogin] = useState(false);
 
   useEffect(() => {
     const checkKioskStatus = async () => {
         const workplaceId = await getKioskWorkplaceId();
         if (!workplaceId) {
-            router.replace('/login');
+            setShouldRedirectToLogin(true);
         } else {
             setIsChecking(false);
             fetchConfig();
@@ -72,10 +73,12 @@ const IdleScreen = () => {
       i18n.changeLanguage(lang);
   };
 
+  if (shouldRedirectToLogin) {
+      return <Redirect href="/login" />;
+  }
+
   if (isChecking) {
-      return (
-        <View className="flex-1 bg-gray-50 dark:bg-gray-900" />
-      );
+      return null;
   }
 
   return (
