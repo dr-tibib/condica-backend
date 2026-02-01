@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ro"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Selectare Mașină - Hidraulica Kiosk</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@700&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1e40af",
+                        success: "#16a34a",
+                        "background-light": "#f1f5f9",
+                        "background-dark": "#0f172a",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        mono: ["JetBrains Mono", "monospace"],
+                    },
+                },
+            },
+        };
+    </script>
+<style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply bg-slate-300 text-slate-900;
+                font-family: 'Inter', sans-serif;
+                width: 1024px;
+                height: 768px;
+                overflow: hidden;
+                margin: 0 auto;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+        .scroll-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scroll-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-300">
+<div class="bg-white dark:bg-slate-900 w-[960px] h-[720px] rounded-[40px] shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+<div class="px-10 py-8 border-b border-slate-100 flex justify-between items-center">
+<h1 class="text-4xl font-black text-slate-900 dark:text-white uppercase tracking-tight">SELECTARE MAȘINĂ</h1>
+<button class="w-14 h-14 flex items-center justify-center rounded-2xl bg-slate-100 text-slate-500 active:bg-slate-200 transition-colors">
+<span class="material-symbols-outlined text-4xl">close</span>
+</button>
+</div>
+<div class="flex-grow p-10 flex flex-col gap-8 overflow-y-auto scroll-hide">
+<div class="space-y-3">
+<label class="text-base font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">DESTINAȚII SELECTATE:</label>
+<div class="flex flex-wrap gap-3">
+<span class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold text-xl flex items-center gap-3 shadow-md">
+                        MATIKON
+                        <span class="material-symbols-outlined text-2xl">location_on</span>
+</span>
+<span class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold text-xl flex items-center gap-3 shadow-md">
+                        București
+                        <span class="material-symbols-outlined text-2xl">location_on</span>
+</span>
+</div>
+</div>
+<div class="flex flex-col gap-4 flex-grow">
+<label class="text-base font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">ALEGE VEHICULUL DISPONIBIL</label>
+<div class="grid grid-cols-2 gap-6 h-full pb-2">
+<button class="flex items-center gap-6 p-8 rounded-[32px] border-[6px] border-primary bg-blue-50 text-primary transition-all shadow-xl ring-4 ring-blue-100/50">
+<div class="w-20 h-20 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-5xl">directions_car</span>
+</div>
+<span class="text-4xl font-black font-mono tracking-tight">BV 23 HID</span>
+</button>
+<button class="flex items-center gap-6 p-8 rounded-[32px] border-4 border-slate-100 bg-white text-slate-800 hover:bg-slate-50 active:scale-95 transition-all">
+<div class="w-20 h-20 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-5xl">directions_car</span>
+</div>
+<span class="text-4xl font-black font-mono tracking-tight">BV 03 HID</span>
+</button>
+<button class="flex items-center gap-6 p-8 rounded-[32px] border-4 border-slate-100 bg-white text-slate-800 hover:bg-slate-50 active:scale-95 transition-all">
+<div class="w-20 h-20 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-5xl">directions_car</span>
+</div>
+<span class="text-4xl font-black font-mono tracking-tight">BV 17 HID</span>
+</button>
+<button class="flex items-center gap-6 p-8 rounded-[32px] border-4 border-slate-100 bg-white text-slate-800 hover:bg-slate-50 active:scale-95 transition-all">
+<div class="w-20 h-20 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-5xl">directions_car</span>
+</div>
+<span class="text-4xl font-black font-mono tracking-tight">B 100 WPK</span>
+</button>
+</div>
+</div>
+</div>
+<div class="p-10 bg-slate-50 border-t border-slate-100">
+<div class="flex gap-6">
+<button class="flex-1 bg-slate-400 hover:bg-slate-500 text-white h-24 rounded-[28px] text-3xl font-black flex items-center justify-center gap-4 active:scale-95 transition-all uppercase tracking-tight shadow-lg">
+<span class="material-symbols-outlined text-4xl">arrow_back</span>
+                    ÎNAPOI
+                </button>
+<button class="flex-1 bg-success hover:bg-green-700 text-white h-24 rounded-[28px] text-3xl font-black flex items-center justify-center gap-4 active:scale-95 transition-all uppercase tracking-tight shadow-xl shadow-green-200">
+<span class="material-symbols-outlined text-4xl">rocket_launch</span>
+                    PORNEȘTE
+                </button>
+</div>
+</div>
+</div>
+
+</body></html>

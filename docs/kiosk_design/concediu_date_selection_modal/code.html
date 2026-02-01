@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ro"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Configurare Concediu - Workplace Kiosk</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2b8cee",
+                        "success": "#22c55e",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-background-dark flex items-center justify-center min-h-screen p-4">
+<!-- Modal Container 1024x768 Optimized -->
+<div class="relative w-full max-w-[1024px] h-auto lg:h-[768px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-slate-800">
+<!-- ToolBar / Header Section -->
+<div class="flex items-center justify-between px-8 py-6 border-b border-gray-100 dark:border-slate-800">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary text-4xl">event_available</span>
+<h1 class="text-[#111418] dark:text-white tracking-tight text-[32px] font-bold leading-tight">Configurare Concediu</h1>
+</div>
+<button class="p-3 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors text-[#111418] dark:text-white">
+<span class="material-symbols-outlined text-4xl">close</span>
+</button>
+</div>
+<!-- Main Content: Dual Calendars -->
+<div class="flex-1 overflow-y-auto px-8 py-6">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+<!-- Left Calendar: Data Început -->
+<div class="flex flex-col gap-4">
+<h2 class="text-xl font-bold text-gray-500 dark:text-gray-400 px-2 flex items-center gap-2">
+<span class="material-symbols-outlined">calendar_today</span>
+                        DATA ÎNCEPUT
+                    </h2>
+<div class="bg-background-light dark:bg-slate-800/50 p-6 rounded-xl border border-gray-100 dark:border-slate-700">
+<div class="flex items-center justify-between mb-6">
+<button class="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full">
+<span class="material-symbols-outlined text-2xl">chevron_left</span>
+</button>
+<p class="text-xl font-bold text-[#111418] dark:text-white">Iunie 2024</p>
+<button class="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full">
+<span class="material-symbols-outlined text-2xl">chevron_right</span>
+</button>
+</div>
+<div class="calendar-grid text-center mb-2">
+<div class="text-gray-400 font-bold text-sm py-2">LU</div>
+<div class="text-gray-400 font-bold text-sm py-2">MA</div>
+<div class="text-gray-400 font-bold text-sm py-2">MI</div>
+<div class="text-gray-400 font-bold text-sm py-2">JO</div>
+<div class="text-gray-400 font-bold text-sm py-2">VI</div>
+<div class="text-primary font-bold text-sm py-2">SÂ</div>
+<div class="text-primary font-bold text-sm py-2">DU</div>
+</div>
+<div class="calendar-grid gap-1">
+<!-- Empty cells for padding -->
+<div class="h-14"></div><div class="h-14"></div><div class="h-14"></div><div class="h-14"></div><div class="h-14"></div>
+<button class="h-14 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 text-lg font-medium dark:text-white">1</button>
+<button class="h-14 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 text-lg font-medium dark:text-white">2</button>
+<button class="h-14 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 text-lg font-medium dark:text-white">3</button>
+<button class="h-14 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 text-lg font-medium dark:text-white">4</button>
+<!-- Selection start -->
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary text-white text-lg font-bold shadow-lg shadow-primary/30">5</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">6</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">7</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">8</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">9</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">10</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">11</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">12</button>
+</div>
+</div>
+</div>
+<!-- Right Calendar: Data Sfârșit -->
+<div class="flex flex-col gap-4">
+<h2 class="text-xl font-bold text-gray-500 dark:text-gray-400 px-2 flex items-center gap-2">
+<span class="material-symbols-outlined">calendar_today</span>
+                        DATA SFÂRȘIT
+                    </h2>
+<div class="bg-background-light dark:bg-slate-800/50 p-6 rounded-xl border border-gray-100 dark:border-slate-700">
+<div class="flex items-center justify-between mb-6">
+<button class="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full">
+<span class="material-symbols-outlined text-2xl">chevron_left</span>
+</button>
+<p class="text-xl font-bold text-[#111418] dark:text-white">Iunie 2024</p>
+<button class="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full">
+<span class="material-symbols-outlined text-2xl">chevron_right</span>
+</button>
+</div>
+<div class="calendar-grid text-center mb-2">
+<div class="text-gray-400 font-bold text-sm py-2">LU</div>
+<div class="text-gray-400 font-bold text-sm py-2">MA</div>
+<div class="text-gray-400 font-bold text-sm py-2">MI</div>
+<div class="text-gray-400 font-bold text-sm py-2">JO</div>
+<div class="text-gray-400 font-bold text-sm py-2">VI</div>
+<div class="text-primary font-bold text-sm py-2">SÂ</div>
+<div class="text-primary font-bold text-sm py-2">DU</div>
+</div>
+<div class="calendar-grid gap-1">
+<div class="h-14"></div><div class="h-14"></div><div class="h-14"></div><div class="h-14"></div><div class="h-14"></div>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">1</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">2</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">3</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">4</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">5</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">6</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">7</button>
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/20 text-lg font-medium dark:text-white">8</button>
+<!-- Selection end -->
+<button class="h-14 flex items-center justify-center rounded-lg bg-primary text-white text-lg font-bold shadow-lg shadow-primary/30">9</button>
+<button class="h-14 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 text-lg font-medium dark:text-white">10</button>
+<button class="h-14 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 text-lg font-medium dark:text-white">11</button>
+<button class="h-14 flex items-center justify-center rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 text-lg font-medium dark:text-white">12</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Summary & Footer Action Area -->
+<div class="bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 p-8 space-y-6">
+<div class="flex items-center justify-center bg-primary/5 dark:bg-primary/10 py-4 rounded-xl border border-primary/20">
+<h2 class="text-primary dark:text-blue-400 text-3xl font-bold flex items-center gap-3">
+<span class="material-symbols-outlined text-4xl">calculate</span>
+                    Număr total de zile: <span class="underline underline-offset-4">5</span>
+</h2>
+</div>
+<div class="flex flex-col sm:flex-row gap-6">
+<button class="flex-1 h-20 flex items-center justify-center gap-3 bg-[#f0f2f4] dark:bg-slate-800 text-[#111418] dark:text-white text-2xl font-bold rounded-xl transition-all hover:bg-gray-200 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-3xl">arrow_back</span>
+                    ÎNAPOI
+                </button>
+<button class="flex-[2] h-20 flex items-center justify-center gap-3 bg-success text-white text-2xl font-bold rounded-xl transition-all hover:opacity-90 shadow-xl shadow-success/20">
+<span class="material-symbols-outlined text-4xl">check_circle</span>
+                    CONFIRMĂ CONCEDIU
+                </button>
+</div>
+</div>
+</div>
+</body></html>
