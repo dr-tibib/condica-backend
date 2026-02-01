@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import StepPlaces from '../components/delegation/StepPlaces';
 import StepVehicle from '../components/delegation/StepVehicle';
-import ConfirmModal from '../components/delegation/ConfirmModal';
 import { getKioskWorkplaceId } from '../../utils/kiosk';
 
 interface Place {
@@ -18,29 +17,30 @@ interface Place {
 
 const DelegationWizard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(1);
   const [selectedPlaces, setSelectedPlaces] = useState<Place[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleStart = () => {
-    setShowConfirm(true);
-  };
+  // Retrieve user from navigation state
+  const user = location.state?.user;
 
-  const handleConfirm = async (code: string) => {
+  useEffect(() => {
+    if (!user) {
+        navigate('/');
+    }
+  }, [user, navigate]);
+
+  if (!user) return null;
+
+  const handleStart = async () => {
     setIsLoading(true);
     try {
       const workplaceId = getKioskWorkplaceId();
-      
-      // 1. Verify Code to get User ID
-      const verifyResponse = await axios.post('/api/kiosk/submit-code', {
-         code,
-         flow: 'delegation'
-      });
-      const userId = verifyResponse.data.user.id;
+      const userId = user.id;
 
-      // 2. Start Delegation for each place
+      // Start Delegation for each place
       // (Execute sequentially to avoid race conditions on check-in if any)
       for (const place of selectedPlaces) {
          await axios.post('/api/delegations', {
@@ -56,16 +56,12 @@ const DelegationWizard = () => {
          });
       }
       
-      // Navigate to success or home
-      // Maybe show a success message first?
-      // I'll just go home for now.
       navigate('/'); 
     } catch (error: any) {
       console.error('Error starting delegation', error);
       alert('Eroare: ' + (error.response?.data?.message || 'Nu s-a putut porni delegația.'));
     } finally {
       setIsLoading(false);
-      setShowConfirm(false);
     }
   };
 
@@ -88,12 +84,10 @@ const DelegationWizard = () => {
             onStart={handleStart} 
         />
       )}
-      {showConfirm && (
-        <ConfirmModal 
-            onConfirm={handleConfirm} 
-            onCancel={() => setShowConfirm(false)} 
-            isLoading={isLoading} 
-        />
+      {isLoading && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <div className="bg-white p-6 rounded-xl text-xl font-bold">Se procesează...</div>
+        </div>
       )}
     </div>
   );

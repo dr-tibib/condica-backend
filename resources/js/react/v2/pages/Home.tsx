@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import Clock from '../components/Clock';
 import FlowSelector from '../components/FlowSelector';
 import CodeInput from '../components/CodeInput';
@@ -7,7 +8,9 @@ import Dashboard from '../components/Dashboard';
 import { getKioskWorkplaceId } from '../../utils/kiosk';
 
 const Home = () => {
+  const navigate = useNavigate();
   const [code, setCode] = useState('');
+  const [selectedFlow, setSelectedFlow] = useState('regular');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -20,12 +23,19 @@ const Home = () => {
       const workplaceId = getKioskWorkplaceId();
       const response = await axios.post('/api/kiosk/submit-code', {
         code,
-        flow: 'regular',
+        flow: selectedFlow,
         workplace_id: workplaceId,
       });
       
+      if (selectedFlow === 'delegation' && response.data.user) {
+        // Navigate to delegation wizard with user info
+        navigate('/delegation', { state: { user: response.data.user } });
+        return;
+      }
+
       setSuccess(response.data.message);
       setCode('');
+      setSelectedFlow('regular');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error processing code');
@@ -45,7 +55,10 @@ const Home = () => {
         <Clock />
       </header>
       
-      <FlowSelector onNormalClick={() => { /* Stay on Normal */ }} /> 
+      <FlowSelector
+        selectedFlow={selectedFlow}
+        onSelectFlow={setSelectedFlow}
+      />
 
       <CodeInput 
         value={code} 
