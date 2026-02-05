@@ -21,7 +21,12 @@ interface DashboardData {
     }[];
 }
 
-const Dashboard = () => {
+interface DashboardProps {
+    refreshTrigger?: number;
+    refreshInterval?: number;
+}
+
+const Dashboard = ({ refreshTrigger = 0, refreshInterval = 10000 }: DashboardProps) => {
   const [data, setData] = useState<DashboardData>({
       latest_logins: [],
       on_leave: [],
@@ -39,9 +44,9 @@ const Dashboard = () => {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 30000); // Poll every 30 seconds
+    const interval = setInterval(fetchData, refreshInterval);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshTrigger, refreshInterval]);
 
   const getEventConfig = (type: string) => {
       switch (type) {

@@ -14,6 +14,7 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [lastActionTime, setLastActionTime] = useState(Date.now());
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -34,6 +35,7 @@ const Home = () => {
       }
 
       setSuccess(response.data.message);
+      setLastActionTime(Date.now());
       setCode('');
       setSelectedFlow('regular');
       setTimeout(() => setSuccess(null), 3000);
@@ -73,7 +75,7 @@ const Home = () => {
         </div>
       )}
 
-      <Dashboard />
+      <Dashboard refreshTrigger={lastActionTime} refreshInterval={10000} />
     </div>
   );
 };
