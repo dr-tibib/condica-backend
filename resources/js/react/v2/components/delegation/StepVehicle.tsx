@@ -91,7 +91,7 @@ const StepVehicle = ({ selectedPlaces, selectedVehicleId, onSelectVehicle, onBac
             <button 
                 onClick={onStart}
                 disabled={!selectedVehicleId}
-                className="flex-1 bg-success hover:bg-green-700 text-white h-24 rounded-[28px] text-3xl font-black flex items-center justify-center gap-4 active:scale-95 transition-all uppercase tracking-tight shadow-xl shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white h-24 rounded-[28px] text-3xl font-black flex items-center justify-center gap-4 active:scale-95 transition-all uppercase tracking-tight shadow-xl shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 <span className="material-symbols-outlined text-4xl">rocket_launch</span>
                 PORNEȘTE
