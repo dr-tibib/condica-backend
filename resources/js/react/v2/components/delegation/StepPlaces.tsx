@@ -156,10 +156,17 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
   };
 
   const visibleSavedPlaces = useMemo(() => {
-    let places = savedPlaces;
+    // Ensure selectedPlaces are included in the base list
+    let places = [...savedPlaces];
+    selectedPlaces.forEach(sp => {
+        if (!places.find(p => p.google_place_id === sp.google_place_id)) {
+            places.unshift(sp);
+        }
+    });
+
     if (inputValue) {
         const lower = inputValue.toLowerCase();
-        places = savedPlaces.filter(p => {
+        places = places.filter(p => {
             const matches = p.name.toLowerCase().includes(lower) || (p.address && p.address.toLowerCase().includes(lower));
             const isSelected = selectedPlaces.some(sp => sp.google_place_id === p.google_place_id);
             return matches || isSelected;
@@ -167,7 +174,7 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
     }
 
     // Sort: Selected first
-    return [...places].sort((a, b) => {
+    return places.sort((a, b) => {
          const aSelected = selectedPlaces.some(sp => sp.google_place_id === a.google_place_id);
          const bSelected = selectedPlaces.some(sp => sp.google_place_id === b.google_place_id);
          if (aSelected && !bSelected) return -1;
