@@ -30,6 +30,7 @@
         "vitest": "^4.0.17"
     },
     "dependencies": {
+        "@vis.gl/react-google-maps": "^1.7.1",
         "haversine-distance": "^1.2.4",
         "i18next": "^25.8.0",
         "i18next-browser-languagedetector": "^8.2.0",
