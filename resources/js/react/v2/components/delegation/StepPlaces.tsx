@@ -232,7 +232,7 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
                             className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left active:scale-[0.98] ${isSelected ? 'border-primary bg-blue-50 dark:bg-blue-900/20 text-primary dark:text-blue-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
                         >
                             {place.photo_reference ? (
-                                <img src={place.photo_reference.startsWith('http') ? place.photo_reference : `https://maps.googleapis.com/maps/api/place/photo?maxwidth=200&photo_reference=${place.photo_reference}&key=${apiKey}`} alt={place.name} className="w-20 h-20 rounded-xl object-cover shadow-sm" />
+                                <img src={place.photo_reference.startsWith('http') ? place.photo_reference : `https://maps.googleapis.com/maps/api/place/photo?maxwidth=200&photo_reference=${place.photo_reference}&key=${apiKey}`} alt={place.name} className="w-20 h-20 rounded-xl object-cover shadow-sm shrink-0" />
                             ) : (
                                 <div className="w-20 h-20 rounded-xl bg-slate-200 flex items-center justify-center shrink-0">
                                     <span className="material-symbols-outlined text-3xl">location_city</span>
