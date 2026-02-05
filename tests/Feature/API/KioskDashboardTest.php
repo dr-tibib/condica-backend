@@ -34,6 +34,16 @@ class KioskDashboardTest extends TenantTestCase
             'method' => 'manual',
         ]);
 
+        // 1.1 Setup Check-out
+        $user1b = User::factory()->create(['name' => 'User One B']);
+        PresenceEvent::create([
+            'user_id' => $user1b->id,
+            'workplace_id' => $workplace->id,
+            'event_type' => 'check_out',
+            'event_time' => now()->subMinutes(5),
+            'method' => 'manual',
+        ]);
+
         // 2. Setup Leave
         $user2 = User::factory()->create(['name' => 'User Two']);
         $leaveType = LeaveType::create([
@@ -71,6 +81,16 @@ class KioskDashboardTest extends TenantTestCase
             'delegation_place_id' => $place->id,
         ]);
 
+        // 3.1 Setup Delegation End
+        $user3b = User::factory()->create(['name' => 'User Three B']);
+        PresenceEvent::create([
+            'user_id' => $user3b->id,
+            'workplace_id' => $workplace->id,
+            'event_type' => 'delegation_end',
+            'event_time' => now()->subMinutes(15),
+            'method' => 'kiosk',
+        ]);
+
         $response = $this->getJson("http://{$domain}/api/kiosk/dashboard");
 
         $response->assertStatus(200)
@@ -84,6 +104,16 @@ class KioskDashboardTest extends TenantTestCase
         $response->assertJsonFragment([
             'user' => 'User One',
             'type' => 'check_in',
+        ]);
+
+        $response->assertJsonFragment([
+            'user' => 'User One B',
+            'type' => 'check_out',
+        ]);
+
+        $response->assertJsonFragment([
+            'user' => 'User Three B',
+            'type' => 'delegation_end',
         ]);
 
         // Check Leave
