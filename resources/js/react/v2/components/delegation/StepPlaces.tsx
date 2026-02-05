@@ -33,65 +33,50 @@ const PlacesAutocomplete = ({
     setInputValue: (val: string) => void
 }) => {
     const placesLibrary = useMapsLibrary('places');
-    const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
-    const [autocompleteService, setAutocompleteService] = useState<google.maps.places.AutocompleteService | null>(null);
+    const [predictions, setPredictions] = useState<google.maps.places.AutocompleteSuggestion[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     useEffect(() => {
-        if (!placesLibrary) return;
-        setAutocompleteService(new placesLibrary.AutocompleteService());
-    }, [placesLibrary]);
-
-    useEffect(() => {
         // Fetch Google predictions
-        if (autocompleteService && inputValue.length > 2) {
-            autocompleteService.getPlacePredictions({ input: inputValue }, (results) => {
-                setPredictions(results || []);
-            });
+        if (placesLibrary && inputValue.length > 2) {
+            // @ts-ignore
+            placesLibrary.AutocompleteSuggestion.fetchAutocompleteSuggestions({ input: inputValue })
+                .then((response: { suggestions: google.maps.places.AutocompleteSuggestion[] }) => {
+                    setPredictions(response.suggestions || []);
+                })
+                .catch((e: unknown) => {
+                    console.error(e);
+                    setPredictions([]);
+                });
         } else {
             setPredictions([]);
         }
-    }, [inputValue, autocompleteService]);
+    }, [inputValue, placesLibrary]);
 
-    const handleSelectPrediction = async (prediction: google.maps.places.AutocompletePrediction) => {
-        if (!placesLibrary) return;
+    const handleSelectPrediction = async (suggestion: google.maps.places.AutocompleteSuggestion) => {
+        if (!placesLibrary || !suggestion.placePrediction) return;
 
         try {
-            // Use the new Places API (Place class)
-            const Place = placesLibrary.Place;
+            const place = suggestion.placePrediction.toPlace();
 
-            let newPlace: Place;
+            await place.fetchFields({
+                fields: ['displayName', 'formattedAddress', 'location', 'photos'],
+            });
 
-            if (Place) {
-                const place = new Place({
-                    id: prediction.place_id,
-                });
-
-                await place.fetchFields({
-                    fields: ['displayName', 'formattedAddress', 'location', 'photos'],
-                });
-
-                let photoRef = undefined;
-                if (place.photos && place.photos.length > 0) {
+            let photoRef = undefined;
+            if (place.photos && place.photos.length > 0) {
                      // @ts-ignore
                     photoRef = place.photos[0].getURI ? place.photos[0].getURI({ maxWidth: 400 }) : undefined;
-                }
-
-                newPlace = {
-                    google_place_id: prediction.place_id,
-                    name: place.displayName || prediction.structured_formatting.main_text,
-                    address: place.formattedAddress || prediction.structured_formatting.secondary_text,
-                    latitude: place.location?.lat(),
-                    longitude: place.location?.lng(),
-                    photo_reference: photoRef
-                };
-            } else {
-                 newPlace = {
-                    google_place_id: prediction.place_id,
-                    name: prediction.structured_formatting.main_text,
-                    address: prediction.structured_formatting.secondary_text,
-                };
             }
+
+            const newPlace: Place = {
+                google_place_id: suggestion.placePrediction.placeId,
+                name: place.displayName || suggestion.placePrediction.text.text,
+                address: place.formattedAddress || (suggestion.placePrediction.secondaryText ? suggestion.placePrediction.secondaryText.text : ''),
+                latitude: place.location?.lat(),
+                longitude: place.location?.lng(),
+                photo_reference: photoRef
+            };
 
             // Add to saved places at the top
             const exists = savedPlaces.find(p => p.google_place_id === newPlace.google_place_id);
@@ -127,19 +112,22 @@ const PlacesAutocomplete = ({
                  <div className="absolute z-10 w-full mt-2 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-80 overflow-y-auto">
                      <div>
                          <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase">Google Places</div>
-                         {predictions.map(prediction => (
-                             <div
-                                key={prediction.place_id}
-                                className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer flex items-center gap-3"
-                                onClick={() => handleSelectPrediction(prediction)}
-                             >
-                                 <span className="material-symbols-outlined text-slate-400">location_on</span>
-                                 <div>
-                                     <div className="font-bold text-slate-800 dark:text-slate-200">{prediction.structured_formatting.main_text}</div>
-                                     <div className="text-sm text-slate-500">{prediction.structured_formatting.secondary_text}</div>
+                         {predictions.map(suggestion => {
+                             if (!suggestion.placePrediction) return null;
+                             return (
+                                 <div
+                                    key={suggestion.placePrediction.placeId}
+                                    className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer flex items-center gap-3"
+                                    onClick={() => handleSelectPrediction(suggestion)}
+                                 >
+                                     <span className="material-symbols-outlined text-slate-400">location_on</span>
+                                     <div>
+                                         <div className="font-bold text-slate-800 dark:text-slate-200">{suggestion.placePrediction.mainText ? suggestion.placePrediction.mainText.text : suggestion.placePrediction.text.text}</div>
+                                         <div className="text-sm text-slate-500">{suggestion.placePrediction.secondaryText ? suggestion.placePrediction.secondaryText.text : ''}</div>
+                                     </div>
                                  </div>
-                             </div>
-                         ))}
+                             );
+                         })}
                      </div>
                  </div>
              )}

@@ -2,21 +2,49 @@ import { debounce } from 'lodash';
 import haversine from 'haversine-distance';
 import useAppStore from '../store/appStore';
 
-const autocompleteService = new google.maps.places.AutocompleteService();
+// Removed deprecated AutocompleteService
+// const autocompleteService = new google.maps.places.AutocompleteService();
+// We keep PlacesService for getDetails for now, though it should be migrated to Place.fetchFields eventually.
 const placesService = new google.maps.places.PlacesService(document.createElement('div'));
 
-const searchPlaces = (query: string, callback: (results: google.maps.places.AutocompletePrediction[]) => void) => {
+const searchPlaces = async (query: string, callback: (results: google.maps.places.AutocompletePrediction[]) => void) => {
     if (!query) {
         callback([]);
         return;
     }
-    autocompleteService.getPlacePredictions({ input: query }, (results, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            callback(results);
-        } else {
-            callback([]);
-        }
-    });
+
+    try {
+        // Use the new AutocompleteSuggestion API
+        // @ts-ignore
+        const { AutocompleteSuggestion } = await google.maps.importLibrary("places");
+
+        // @ts-ignore
+        const response = await AutocompleteSuggestion.fetchAutocompleteSuggestions({ input: query });
+
+        // Map to legacy AutocompletePrediction format for backward compatibility
+        const predictions = (response.suggestions || []).map((suggestion: any) => {
+             const pred = suggestion.placePrediction;
+             if (!pred) return null;
+
+             return {
+                 description: pred.text.text,
+                 place_id: pred.placeId,
+                 structured_formatting: {
+                     main_text: pred.mainText ? pred.mainText.text : pred.text.text,
+                     secondary_text: pred.secondaryText ? pred.secondaryText.text : '',
+                     main_text_matched_substrings: [],
+                 },
+                 types: pred.types || [],
+                 matched_substrings: [],
+                 terms: [],
+             };
+        }).filter((p: any) => p !== null) as google.maps.places.AutocompletePrediction[];
+
+        callback(predictions);
+    } catch (e) {
+        console.error("Error fetching suggestions:", e);
+        callback([]);
+    }
 };
 
 export const debouncedSearchPlaces = debounce(searchPlaces, 300);
