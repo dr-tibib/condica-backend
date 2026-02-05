@@ -41,6 +41,7 @@ Route::middleware([
     Route::get('/config', [ConfigController::class, 'index']);
 
     Route::prefix('kiosk')->group(function () {
+        Route::get('/dashboard', [KioskController::class, 'getDashboardData']);
         Route::post('/submit-code', [KioskController::class, 'submitCode']);
         Route::get('/vehicles', [KioskController::class, 'getVehicles']);
         Route::get('/saved-places', [KioskController::class, 'getSavedPlaces']);

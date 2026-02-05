@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\Delegation;
 use App\Models\DelegationPlace;
+use App\Models\LeaveRequest;
+use App\Models\PresenceEvent;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\PresenceService;
@@ -30,6 +33,60 @@ class KioskController extends Controller
     {
         return response()->json([
             'data' => DelegationPlace::orderBy('name')->get(),
+        ]);
+    }
+
+    public function getDashboardData(): JsonResponse
+    {
+        // 1. Latest Logins
+        $latestLogins = PresenceEvent::with('user')
+            ->whereIn('event_type', ['check_in', 'delegation_start'])
+            ->orderBy('event_time', 'desc')
+            ->take(20)
+            ->get()
+            ->map(function ($event) {
+                return [
+                    'id' => $event->id,
+                    'user' => $event->user->name,
+                    'time' => $event->event_time->format('H:i'),
+                    'type' => $event->event_type,
+                ];
+            });
+
+        // 2. On Leave
+        $onLeave = LeaveRequest::with('user')
+            ->where('status', 'APPROVED')
+            ->whereDate('start_date', '<=', now())
+            ->whereDate('end_date', '>=', now())
+            ->get()
+            ->map(function ($leave) {
+                return [
+                    'id' => $leave->id,
+                    'user' => $leave->user->name,
+                    'until' => $leave->end_date->format('d.m.Y'),
+                ];
+            });
+
+        // 3. Active Delegations
+        $activeDelegations = Delegation::with(['user', 'vehicle', 'delegationPlace'])
+            ->whereHas('startEvent', function ($query) {
+                $query->whereNull('pair_event_id');
+            })
+            ->get()
+            ->map(function ($delegation) {
+                $destination = $delegation->delegationPlace ? $delegation->delegationPlace->name : ($delegation->address ?? $delegation->name);
+                return [
+                    'id' => $delegation->id,
+                    'user' => $delegation->user->name,
+                    'destination' => $destination,
+                    'vehicle' => $delegation->vehicle ? $delegation->vehicle->license_plate : '-',
+                ];
+            });
+
+        return response()->json([
+            'latest_logins' => $latestLogins,
+            'on_leave' => $onLeave,
+            'active_delegations' => $activeDelegations,
         ]);
     }
 
