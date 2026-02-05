@@ -7,6 +7,11 @@
     <x-backpack::menu-dropdown-item title="Workplaces" icon="la la-building" :link="backpack_url('workplace')" />
 </x-backpack::menu-dropdown>
 
+<x-backpack::menu-dropdown title="Delegations" icon="la la-map-signs">
+    <x-backpack::menu-dropdown-item title="Delegations" icon="la la-list" :link="backpack_url('delegation')" />
+    <x-backpack::menu-dropdown-item title="Delegation Places" icon="la la-map-marker" :link="backpack_url('delegation-place')" />
+</x-backpack::menu-dropdown>
+
 <x-backpack::menu-dropdown title="Assets" icon="la la-cube">
     <x-backpack::menu-dropdown-item title="Vehicles" icon="la la-car" :link="backpack_url('vehicle')" />
 </x-backpack::menu-dropdown>

@@ -29,6 +29,8 @@ Route::group([
     Route::crud('team-command-center', 'TeamCommandCenterController');
     Route::get('dashboard', 'EmployeeDashboardController@dashboard')->name('backpack.dashboard');
     Route::crud('vehicle', 'VehicleCrudController');
+    Route::crud('delegation-place', 'DelegationPlaceCrudController');
+    Route::crud('delegation', 'DelegationCrudController');
 }); // this should be the absolute last line of this file
 
 /**
