@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import GooglePlacesAutocomplete from 'react-google-places-autocomplete';
-import useGoogleMaps from '../../hooks/useGoogleMaps';
+import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
 
 interface Place {
   id?: number;
@@ -20,10 +19,138 @@ interface StepPlacesProps {
   onBack: () => void;
 }
 
-const StepPlaces = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepPlacesProps) => {
+const PlacesAutocomplete = ({
+    savedPlaces,
+    setSavedPlaces,
+    onSelectPlace,
+    inputValue,
+    setInputValue
+}: {
+    savedPlaces: Place[],
+    setSavedPlaces: (places: Place[]) => void,
+    onSelectPlace: (place: Place) => void,
+    inputValue: string,
+    setInputValue: (val: string) => void
+}) => {
+    const placesLibrary = useMapsLibrary('places');
+    const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+    const [autocompleteService, setAutocompleteService] = useState<google.maps.places.AutocompleteService | null>(null);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
+    useEffect(() => {
+        if (!placesLibrary) return;
+        setAutocompleteService(new placesLibrary.AutocompleteService());
+    }, [placesLibrary]);
+
+    useEffect(() => {
+        // Fetch Google predictions
+        if (autocompleteService && inputValue.length > 2) {
+            autocompleteService.getPlacePredictions({ input: inputValue }, (results) => {
+                setPredictions(results || []);
+            });
+        } else {
+            setPredictions([]);
+        }
+    }, [inputValue, autocompleteService]);
+
+    const handleSelectPrediction = async (prediction: google.maps.places.AutocompletePrediction) => {
+        if (!placesLibrary) return;
+
+        try {
+            // Use the new Places API (Place class)
+            const Place = placesLibrary.Place;
+
+            let newPlace: Place;
+
+            if (Place) {
+                const place = new Place({
+                    id: prediction.place_id,
+                });
+
+                await place.fetchFields({
+                    fields: ['displayName', 'formattedAddress', 'location', 'photos'],
+                });
+
+                let photoRef = undefined;
+                if (place.photos && place.photos.length > 0) {
+                     // @ts-ignore
+                    photoRef = place.photos[0].getURI ? place.photos[0].getURI({ maxWidth: 400 }) : undefined;
+                }
+
+                newPlace = {
+                    google_place_id: prediction.place_id,
+                    name: place.displayName || prediction.structured_formatting.main_text,
+                    address: place.formattedAddress || prediction.structured_formatting.secondary_text,
+                    latitude: place.location?.lat(),
+                    longitude: place.location?.lng(),
+                    photo_reference: photoRef
+                };
+            } else {
+                 newPlace = {
+                    google_place_id: prediction.place_id,
+                    name: prediction.structured_formatting.main_text,
+                    address: prediction.structured_formatting.secondary_text,
+                };
+            }
+
+            // Add to saved places at the top
+            const exists = savedPlaces.find(p => p.google_place_id === newPlace.google_place_id);
+            if (!exists) {
+                 setSavedPlaces([newPlace, ...savedPlaces]);
+            }
+
+            onSelectPlace(newPlace);
+            setInputValue('');
+            setShowSuggestions(false);
+        } catch (error) {
+            console.error('Error fetching place details:', error);
+        }
+    };
+
+    return (
+        <div className="relative">
+             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-3xl">search</span>
+             <input
+                className="w-full pl-14 pr-6 py-5 text-2xl rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:border-primary focus:ring-0 transition-all font-medium"
+                placeholder="Introduceți orașul sau firma..."
+                type="text"
+                value={inputValue}
+                onChange={(e) => {
+                    setInputValue(e.target.value);
+                    setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+             />
+
+             {showSuggestions && predictions.length > 0 && (
+                 <div className="absolute z-10 w-full mt-2 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-80 overflow-y-auto">
+                     <div>
+                         <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase">Google Places</div>
+                         {predictions.map(prediction => (
+                             <div
+                                key={prediction.place_id}
+                                className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer flex items-center gap-3"
+                                onClick={() => handleSelectPrediction(prediction)}
+                             >
+                                 <span className="material-symbols-outlined text-slate-400">location_on</span>
+                                 <div>
+                                     <div className="font-bold text-slate-800 dark:text-slate-200">{prediction.structured_formatting.main_text}</div>
+                                     <div className="text-sm text-slate-500">{prediction.structured_formatting.secondary_text}</div>
+                                 </div>
+                             </div>
+                         ))}
+                     </div>
+                 </div>
+             )}
+        </div>
+    );
+};
+
+const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepPlacesProps) => {
   const [savedPlaces, setSavedPlaces] = useState<Place[]>([]);
+  const [inputValue, setInputValue] = useState('');
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const { isLoaded, loadError } = useGoogleMaps(apiKey);
 
   useEffect(() => {
     fetchSavedPlaces();
@@ -32,11 +159,34 @@ const StepPlaces = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepP
   const fetchSavedPlaces = async () => {
     try {
       const response = await axios.get('/api/kiosk/saved-places');
-      setSavedPlaces(response.data.data);
+      if (response.data && response.data.data) {
+          setSavedPlaces(response.data.data);
+      }
     } catch (error) {
       console.error('Failed to fetch places', error);
     }
   };
+
+  const visibleSavedPlaces = useMemo(() => {
+    let places = savedPlaces;
+    if (inputValue) {
+        const lower = inputValue.toLowerCase();
+        places = savedPlaces.filter(p => {
+            const matches = p.name.toLowerCase().includes(lower) || (p.address && p.address.toLowerCase().includes(lower));
+            const isSelected = selectedPlaces.some(sp => sp.google_place_id === p.google_place_id);
+            return matches || isSelected;
+        });
+    }
+
+    // Sort: Selected first
+    return [...places].sort((a, b) => {
+         const aSelected = selectedPlaces.some(sp => sp.google_place_id === a.google_place_id);
+         const bSelected = selectedPlaces.some(sp => sp.google_place_id === b.google_place_id);
+         if (aSelected && !bSelected) return -1;
+         if (!aSelected && bSelected) return 1;
+         return 0;
+    });
+  }, [savedPlaces, inputValue, selectedPlaces]);
 
   const togglePlace = (place: Place) => {
     const exists = selectedPlaces.find(p => p.google_place_id === place.google_place_id);
@@ -47,41 +197,10 @@ const StepPlaces = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepP
     }
   };
 
-  const handleGoogleSelect = async (val: any) => {
-      if (!val) return;
-
-      try {
-          const place = new google.maps.places.Place({
-              id: val.value.place_id,
-          });
-
-          // Fetch fields using the new Places API
-          await place.fetchFields({
-              fields: ['displayName', 'formattedAddress', 'location', 'photos'],
-          });
-
-          let photoRef = undefined;
-          if (place.photos && place.photos.length > 0) {
-              // Using getURI method from the new Places API Photo object
-              photoRef = place.photos[0].getURI({ maxWidth: 400 });
-          }
-
-          const newPlace: Place = {
-              google_place_id: val.value.place_id,
-              name: place.displayName || val.label,
-              address: place.formattedAddress,
-              latitude: place.location?.lat(),
-              longitude: place.location?.lng(),
-              photo_reference: photoRef
-          };
-
-          // Add to selected if not exists
-           const exists = selectedPlaces.find(p => p.google_place_id === newPlace.google_place_id);
-           if (!exists) {
-              onSelectionChange([...selectedPlaces, newPlace]);
-           }
-      } catch (error) {
-          console.error('Error fetching place details:', error);
+  const handleSearchSelect = (place: Place) => {
+      const exists = selectedPlaces.find(p => p.google_place_id === place.google_place_id);
+      if (!exists) {
+          onSelectionChange([...selectedPlaces, place]);
       }
   };
 
@@ -96,31 +215,20 @@ const StepPlaces = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepP
 
       <div className="flex-grow p-8 flex flex-col gap-8 overflow-y-auto scroll-hide">
          <div className="space-y-3">
-            <label className="text-sm font-bold text-slate-500 uppercase tracking-widest ml-1">Caută Destinație</label>
-            <div className="relative text-black">
-                {isLoaded ? (
-                    <GooglePlacesAutocomplete
-                        selectProps={{
-                            placeholder: 'Introduceți orașul sau firma...',
-                            onChange: handleGoogleSelect,
-                            styles: {
-                                input: (provided) => ({ ...provided, padding: '10px', fontSize: '1.25rem' }),
-                                control: (provided) => ({ ...provided, borderRadius: '1rem', padding: '5px' }),
-                            }
-                        }}
-                    />
-                ) : (
-                    <div className="p-4 bg-slate-100 rounded-2xl text-center text-slate-500">
-                        {loadError ? 'Eroare la încărcarea hărților.' : 'Se încarcă hărțile...'}
-                    </div>
-                )}
-            </div>
+            <label className="text-sm font-bold text-slate-500 uppercase tracking-widest ml-1">Caută Destinație (sau adaugă localitate nouă via Google)</label>
+            <PlacesAutocomplete
+                savedPlaces={savedPlaces}
+                setSavedPlaces={setSavedPlaces}
+                onSelectPlace={handleSearchSelect}
+                inputValue={inputValue}
+                setInputValue={setInputValue}
+            />
          </div>
 
          <div className="space-y-4">
             <label className="text-sm font-bold text-slate-500 uppercase tracking-widest ml-1">Destinații Recurente</label>
             <div className="grid grid-cols-2 gap-4">
-                {savedPlaces.map(place => {
+                {visibleSavedPlaces.map(place => {
                     const isSelected = selectedPlaces.some(p => p.google_place_id === place.google_place_id);
                     return (
                         <button 
@@ -131,15 +239,15 @@ const StepPlaces = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepP
                             {place.photo_reference ? (
                                 <img src={place.photo_reference.startsWith('http') ? place.photo_reference : `https://maps.googleapis.com/maps/api/place/photo?maxwidth=200&photo_reference=${place.photo_reference}&key=${apiKey}`} alt={place.name} className="w-20 h-20 rounded-xl object-cover shadow-sm" />
                             ) : (
-                                <div className="w-20 h-20 rounded-xl bg-slate-200 flex items-center justify-center">
+                                <div className="w-20 h-20 rounded-xl bg-slate-200 flex items-center justify-center shrink-0">
                                     <span className="material-symbols-outlined text-3xl">location_city</span>
                                 </div>
                             )}
-                            <div className="flex-grow">
-                                <span className="text-xl font-bold block">{place.name}</span>
-                                <span className="text-sm opacity-70 truncate">{place.address}</span>
+                            <div className="flex-grow min-w-0">
+                                <span className="text-xl font-bold block truncate">{place.name}</span>
+                                <span className="text-sm opacity-70 truncate block">{place.address}</span>
                             </div>
-                            <span className={`material-symbols-outlined text-4xl ${isSelected ? '' : 'opacity-20'}`}>
+                            <span className={`material-symbols-outlined text-4xl shrink-0 ${isSelected ? '' : 'opacity-20'}`}>
                                 {isSelected ? 'check_circle' : 'radio_button_unchecked'}
                             </span>
                         </button>
@@ -153,7 +261,7 @@ const StepPlaces = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepP
         <button 
             onClick={onNext}
             disabled={selectedPlaces.length === 0}
-            className="w-full bg-success hover:bg-green-700 text-white py-8 rounded-2xl text-4xl font-black shadow-xl shadow-green-500/20 flex items-center justify-center gap-4 active:scale-[0.98] transition-all uppercase tracking-tight disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-8 rounded-2xl text-4xl font-black shadow-xl shadow-green-500/20 flex items-center justify-center gap-4 active:scale-[0.98] transition-all uppercase tracking-tight disabled:opacity-50 disabled:cursor-not-allowed"
         >
             <span className="material-symbols-outlined text-5xl">directions_car</span>
             SELECTEAZĂ MAȘINA
@@ -161,6 +269,14 @@ const StepPlaces = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepP
       </div>
     </div>
   );
+};
+
+const StepPlaces = (props: StepPlacesProps) => {
+    return (
+        <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={['places']}>
+            <StepPlacesContent {...props} />
+        </APIProvider>
+    );
 };
 
 export default StepPlaces;
