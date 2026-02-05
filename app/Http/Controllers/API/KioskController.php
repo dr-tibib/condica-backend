@@ -40,7 +40,7 @@ class KioskController extends Controller
     {
         // 1. Latest Logins
         $latestLogins = PresenceEvent::with('user')
-            ->whereIn('event_type', ['check_in', 'delegation_start'])
+            ->whereIn('event_type', ['check_in', 'check_out', 'delegation_start', 'delegation_end'])
             ->orderBy('event_time', 'desc')
             ->take(20)
             ->get()

@@ -43,6 +43,21 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const getEventConfig = (type: string) => {
+      switch (type) {
+          case 'check_in':
+              return { icon: 'login', color: 'text-green-500' };
+          case 'check_out':
+              return { icon: 'logout', color: 'text-red-500' };
+          case 'delegation_start':
+              return { icon: 'flight_takeoff', color: 'text-blue-500' };
+          case 'delegation_end':
+              return { icon: 'flight_land', color: 'text-orange-500' };
+          default:
+              return { icon: 'circle', color: 'text-slate-400' };
+      }
+  };
+
   return (
     <div className="flex-grow grid grid-rows-2 gap-5 overflow-hidden h-full">
       <div className="grid grid-cols-2 gap-5 h-full">
@@ -54,17 +69,20 @@ const Dashboard = () => {
           <div className="flex-grow overflow-y-auto scroll-hide">
             <table className="w-full text-left border-collapse">
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {data.latest_logins.map((login) => (
-                    <tr key={login.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                      <td className="py-3 px-4 flex items-center gap-3">
-                          <span className={`material-symbols-outlined ${login.type === 'check_in' || login.type === 'delegation_start' ? 'text-green-500' : 'text-red-500'} font-bold`}>
-                              {login.type === 'check_in' || login.type === 'delegation_start' ? 'login' : 'logout'}
-                          </span>
-                          <span className="font-semibold">{login.user}</span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono text-green-500 font-bold">{login.time}</td>
-                    </tr>
-                  ))}
+                  {data.latest_logins.map((login) => {
+                    const { icon, color } = getEventConfig(login.type);
+                    return (
+                        <tr key={login.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                        <td className="py-3 px-4 flex items-center gap-3">
+                            <span className={`material-symbols-outlined ${color} font-bold`}>
+                                {icon}
+                            </span>
+                            <span className="font-semibold">{login.user}</span>
+                        </td>
+                        <td className={`py-3 px-4 text-right font-mono font-bold ${color}`}>{login.time}</td>
+                        </tr>
+                    );
+                  })}
                   {data.latest_logins.length === 0 && (
                       <tr><td colSpan={2} className="py-4 text-center text-slate-400">Nu există logări recente.</td></tr>
                   )}
