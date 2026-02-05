@@ -1,6 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+interface DashboardData {
+    latest_logins: {
+        id: number;
+        user: string;
+        time: string;
+        type: string;
+    }[];
+    on_leave: {
+        id: number;
+        user: string;
+        until: string;
+    }[];
+    active_delegations: {
+        id: number;
+        user: string;
+        destination: string;
+        vehicle: string;
+    }[];
+}
 
 const Dashboard = () => {
+  const [data, setData] = useState<DashboardData>({
+      latest_logins: [],
+      on_leave: [],
+      active_delegations: []
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get('/api/kiosk/dashboard');
+        setData(response.data);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data', error);
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 30000); // Poll every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="flex-grow grid grid-rows-2 gap-5 overflow-hidden h-full">
       <div className="grid grid-cols-2 gap-5 h-full">
@@ -12,14 +54,20 @@ const Dashboard = () => {
           <div className="flex-grow overflow-y-auto scroll-hide">
             <table className="w-full text-left border-collapse">
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {/* Placeholder rows */}
-                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="py-3 px-4 flex items-center gap-3">
-                        <span className="material-symbols-outlined text-green-500 font-bold">login</span>
-                        <span className="font-semibold">Demo User</span>
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-green-500 font-bold">12:00</td>
-                  </tr>
+                  {data.latest_logins.map((login) => (
+                    <tr key={login.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                      <td className="py-3 px-4 flex items-center gap-3">
+                          <span className={`material-symbols-outlined ${login.type === 'check_in' || login.type === 'delegation_start' ? 'text-green-500' : 'text-red-500'} font-bold`}>
+                              {login.type === 'check_in' || login.type === 'delegation_start' ? 'login' : 'logout'}
+                          </span>
+                          <span className="font-semibold">{login.user}</span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-green-500 font-bold">{login.time}</td>
+                    </tr>
+                  ))}
+                  {data.latest_logins.length === 0 && (
+                      <tr><td colSpan={2} className="py-4 text-center text-slate-400">Nu există logări recente.</td></tr>
+                  )}
               </tbody>
             </table>
           </div>
@@ -32,10 +80,15 @@ const Dashboard = () => {
           <div className="flex-grow overflow-y-auto scroll-hide">
              <table className="w-full text-left border-collapse">
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                        <td className="py-3 px-4 font-semibold">Demo User</td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400 font-bold">25.10.2023</td>
-                    </tr>
+                    {data.on_leave.map((leave) => (
+                        <tr key={leave.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                            <td className="py-3 px-4 font-semibold">{leave.user}</td>
+                            <td className="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400 font-bold">{leave.until}</td>
+                        </tr>
+                    ))}
+                    {data.on_leave.length === 0 && (
+                      <tr><td colSpan={2} className="py-4 text-center text-slate-400">Nimeni în concediu.</td></tr>
+                    )}
                 </tbody>
              </table>
           </div>
@@ -50,11 +103,16 @@ const Dashboard = () => {
         <div className="flex-grow overflow-y-auto scroll-hide">
             <table className="w-full text-left border-collapse">
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                     <tr className="grid grid-cols-12 items-center hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                        <td className="col-span-6 py-3 px-4 font-semibold">Demo User</td>
-                        <td className="col-span-3 py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Bucharest</td>
-                        <td className="col-span-3 py-3 px-4 font-mono font-bold text-primary dark:text-blue-400 uppercase text-right">B-123-ABC</td>
-                    </tr>
+                    {data.active_delegations.map((delegation) => (
+                         <tr key={delegation.id} className="grid grid-cols-12 items-center hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                            <td className="col-span-6 py-3 px-4 font-semibold">{delegation.user}</td>
+                            <td className="col-span-3 py-3 px-4 font-medium text-slate-600 dark:text-slate-400">{delegation.destination}</td>
+                            <td className="col-span-3 py-3 px-4 font-mono font-bold text-primary dark:text-blue-400 uppercase text-right">{delegation.vehicle}</td>
+                        </tr>
+                    ))}
+                    {data.active_delegations.length === 0 && (
+                      <tr><td colSpan={3} className="py-4 text-center text-slate-400 block w-full">Nimeni în delegație.</td></tr>
+                    )}
                 </tbody>
             </table>
         </div>

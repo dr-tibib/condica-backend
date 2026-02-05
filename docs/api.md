@@ -397,6 +397,43 @@ Get public tenant configuration for the frontend/kiosk.
 }
 ```
 
+### Kiosk Dashboard Data
+
+Get data for the kiosk dashboard (recent logins, leaves, delegations).
+
+**Endpoint:** `GET /kiosk/dashboard`
+**Auth Required:** No (Kiosk Mode)
+
+**Response (200 OK):**
+
+```json
+{
+    "latest_logins": [
+        {
+            "id": 101,
+            "user": "John Doe",
+            "time": "09:00",
+            "type": "check_in"
+        }
+    ],
+    "on_leave": [
+        {
+            "id": 5,
+            "user": "Jane Smith",
+            "until": "25.10.2023"
+        }
+    ],
+    "active_delegations": [
+        {
+            "id": 10,
+            "user": "Bob Brown",
+            "destination": "Bucharest",
+            "vehicle": "B-123-ABC"
+        }
+    ]
+}
+```
+
 ### Kiosk Code Entry
 
 Submit a kiosk access code to check in, check out, or verify identity.
