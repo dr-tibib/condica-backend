@@ -4,6 +4,11 @@ $field['map_options']['locate'] = $field['map_options']['locate'] ?? true;
 $field['map_options']['default_lat'] = $field['map_options']['default_lat'] ?? config('services.google_places.default_lat', 29.9772962);
 $field['map_options']['default_lng'] = $field['map_options']['default_lng'] ?? config('services.google_places.default_lng', 31.1324955);
 $field['map_options']['language'] = $field['map_options']['language'] ?? app()->getLocale();
+$field['map_options']['lat'] = $field['map_options']['lat'] ?? 'lat';
+$field['map_options']['lng'] = $field['map_options']['lng'] ?? 'lng';
+$field['map_options']['formatted_address'] = $field['map_options']['formatted_address'] ?? 'formatted_address';
+$field['map_options']['google_place_id'] = $field['map_options']['google_place_id'] ?? 'google_place_id';
+$field['map_options']['photo_reference'] = $field['map_options']['photo_reference'] ?? null;
 $field['value'] = old_empty_or_null($field['name'], '') ?? $field['value'] ?? $field['default'] ?? '';
 @endphp
 @include('crud::fields.inc.wrapper_start')
@@ -25,6 +30,11 @@ $field['value'] = old_empty_or_null($field['name'], '') ?? $field['value'] ?? $f
             data-init-function="bpFieldInitGoogleMapElement"
             data-google-default-lat="{{$field['map_options']['default_lat']}}"
             data-google-default-lng="{{$field['map_options']['default_lng']}}"
+            data-field-lat="{{ $field['map_options']['lat'] }}"
+            data-field-lng="{{ $field['map_options']['lng'] }}"
+            data-field-address="{{ $field['map_options']['formatted_address'] }}"
+            data-field-google-place-id="{{ $field['map_options']['google_place_id'] }}"
+            data-field-photo="{{ $field['map_options']['photo_reference'] }}"
             @include('crud::fields.inc.attributes')>
         @if(isset($field['suffix'])) <div class="input-group-append"><span class="input-group-text">{!! $field['suffix'] !!}</span></div> @endif
         @if(isset($field['prefix']) || isset($field['suffix']))
@@ -67,6 +77,21 @@ $field['value'] = old_empty_or_null($field['name'], '') ?? $field['value'] ?? $f
         if (typeof google === "undefined") {
             return;
         }
+
+        const fieldLat = element.data('field-lat');
+        const fieldLng = element.data('field-lng');
+        const fieldAddress = element.data('field-address');
+        const fieldPlaceId = element.data('field-google-place-id');
+        const fieldPhoto = element.data('field-photo');
+
+        const updateLinkedField = (fieldName, value) => {
+             if (!fieldName) return;
+             let input = element.closest('form').find('input[name="'+fieldName+'"]');
+             if (input.length) {
+                 input.val(value).trigger('change');
+             }
+        };
+
         const savePosition = (pos, address, mapField) => {
             new Promise(resolve => {
                 var data = {};
@@ -74,6 +99,11 @@ $field['value'] = old_empty_or_null($field['name'], '') ?? $field['value'] ?? $f
                 data['lng'] = typeof pos.lng === 'function' ? pos.lng() : pos.lng;
                 data['formatted_address'] = address;
                 mapField.value = JSON.stringify(data);
+
+                updateLinkedField(fieldLat, data['lat']);
+                updateLinkedField(fieldLng, data['lng']);
+                updateLinkedField(fieldAddress, address);
+
                 resolve(data);
             });
         };
@@ -266,6 +296,17 @@ $field['value'] = old_empty_or_null($field['name'], '') ?? $field['value'] ?? $f
                                 element: element[0]
                             }
                         }));
+
+                        if (place.place_id) {
+                            updateLinkedField(fieldPlaceId, place.place_id);
+                        }
+
+                        if (fieldPhoto && place.photos && place.photos.length > 0) {
+                             // Try to use getUrl() as a fallback since the raw reference might be hidden
+                             // Note: URLs expire. Ideally we want the reference string.
+                             let photoUrl = place.photos[0].getUrl({ maxWidth: 400 });
+                             updateLinkedField(fieldPhoto, photoUrl);
+                        }
 
                         savePosition(place.geometry.location, place.formatted_address, mapField);
                         if (place.geometry.viewport) {

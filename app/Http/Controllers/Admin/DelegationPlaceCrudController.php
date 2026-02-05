@@ -51,7 +51,7 @@ class DelegationPlaceCrudController extends CrudController
         CRUD::field('map')
             ->type('google_map')
             ->label('Location (Search and Select)')
-            ->options([
+            ->map_options([
                 'key' => config('services.google_places.key'),
                 'default_lat' => 44.4268,
                 'default_lng' => 26.1025,
@@ -59,6 +59,7 @@ class DelegationPlaceCrudController extends CrudController
                 'lng' => 'longitude',
                 'google_place_id' => 'google_place_id',
                 'formatted_address' => 'address',
+                'photo_reference' => 'photo_reference',
             ])
             ->hint('Use the map to search for a location.');
 

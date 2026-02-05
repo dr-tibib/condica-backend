@@ -16,7 +16,7 @@
 
     $apiKey = config('services.google_places.key');
     $imageUrl = $photoReference
-        ? "https://maps.googleapis.com/maps/api/place/photo?maxwidth=200&photo_reference={$photoReference}&key={$apiKey}"
+        ? (str_starts_with($photoReference, 'http') ? $photoReference : "https://maps.googleapis.com/maps/api/place/photo?maxwidth=200&photo_reference={$photoReference}&key={$apiKey}")
         : null;
 @endphp
 
