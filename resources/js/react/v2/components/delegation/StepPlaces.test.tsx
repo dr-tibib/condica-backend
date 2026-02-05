@@ -12,18 +12,20 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 // Mock Google Maps Library
 const mockFetchFields = vi.fn().mockResolvedValue(googlePlaceDetailsMock);
 
-const mockAutocompleteService = {
-    getPlacePredictions: vi.fn().mockImplementation((req, cb) => {
-        if (cb) {
-            cb(googlePredictionsMock, 'OK');
-        }
-        return Promise.resolve({ predictions: googlePredictionsMock });
-    })
-};
-
-class MockAutocompleteServiceClass {
-    getPlacePredictions = mockAutocompleteService.getPlacePredictions;
-}
+const mockFetchAutocompleteSuggestions = vi.fn().mockImplementation((req) => {
+    return Promise.resolve({
+        suggestions: googlePredictionsMock.map((p: any) => ({
+            placePrediction: {
+                placeId: p.place_id,
+                text: { text: p.description },
+                mainText: { text: p.structured_formatting.main_text },
+                secondaryText: { text: p.structured_formatting.secondary_text },
+                toPlace: () => new MockPlaceClass({ id: p.place_id }),
+                types: p.types || []
+            }
+        }))
+    });
+});
 
 const mockPlaceConstructor = vi.fn(); // Spy to track calls
 
@@ -42,7 +44,9 @@ class MockPlaceClass {
 }
 
 const mockPlacesLibrary = {
-    AutocompleteService: MockAutocompleteServiceClass,
+    AutocompleteSuggestion: {
+        fetchAutocompleteSuggestions: mockFetchAutocompleteSuggestions
+    },
     Place: MockPlaceClass,
 };
 
@@ -118,7 +122,7 @@ describe('StepPlaces Component', () => {
 
         // Wait for debounce and effect
         await waitFor(() => {
-            expect(mockAutocompleteService.getPlacePredictions).toHaveBeenCalled();
+            expect(mockFetchAutocompleteSuggestions).toHaveBeenCalled();
         });
 
         // Expect suggestions to appear (we need to know how they render)
