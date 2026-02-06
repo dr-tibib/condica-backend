@@ -44,10 +44,10 @@ const CodeInput = ({ value, onChange, onSubmit, isLoading }: CodeInputProps) => 
             onChange(val);
         }}
         className="flex-grow text-4xl p-4 border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-900 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all outline-none font-mono" 
-        placeholder="••••" 
+        placeholder="" 
         type="text" // Visible characters as requested
         autoFocus
-        maxLength={4} // Assuming 4 digits based on placeholder
+        maxLength={10}
       />
       <button 
         onClick={onSubmit}
