@@ -183,4 +183,139 @@ class PresenceService
             return $delegationEnd;
         });
     }
+
+    /**
+     * End a delegation with a schedule (multi-day).
+     *
+     * @param  array<int, array{date: string, start_time: string, end_time: string}>  $schedule
+     */
+    public function endDelegationWithSchedule(User $user, array $schedule): void
+    {
+        $latestDelegationStart = $user->presenceEvents()
+            ->where('event_type', 'delegation_start')
+            ->whereNull('pair_event_id')
+            ->latest('event_time')
+            ->first();
+
+        if (! $latestDelegationStart) {
+            throw ValidationException::withMessages([
+                'status' => ['You are not in a delegation.'],
+            ]);
+        }
+
+        DB::transaction(function () use ($user, $schedule, $latestDelegationStart) {
+            foreach ($schedule as $index => $day) {
+                $date = $day['date'];
+                $startTime = $day['start_time']; // H:i
+                $endTime = $day['end_time']; // H:i
+
+                $startDateTime = \Carbon\Carbon::parse("$date $startTime");
+                $endDateTime = \Carbon\Carbon::parse("$date $endTime");
+
+                // Determine if first or last day
+                $isFirstDay = ($index === 0);
+                $isLastDay = ($index === count($schedule) - 1);
+
+                if ($isFirstDay) {
+                    // Fetch existing check-in BEFORE updating start time
+                    $originalStartTime = $latestDelegationStart->event_time;
+
+                    // Update existing start to match the schedule
+                    $latestDelegationStart->update(['event_time' => $startDateTime]);
+
+                    // Close First Day: DelegationEnd + CheckOut at endDateTime.
+                    $delegationEnd = PresenceEvent::create([
+                        'user_id' => $user->id,
+                        'workplace_id' => $latestDelegationStart->workplace_id,
+                        'event_type' => 'delegation_end',
+                        'event_time' => $endDateTime,
+                        'method' => 'kiosk_schedule',
+                        'pair_event_id' => $latestDelegationStart->id,
+                    ]);
+                    $latestDelegationStart->update(['pair_event_id' => $delegationEnd->id]);
+
+                    // Close the open CheckIn corresponding to this session
+                    $checkIn = PresenceEvent::where('user_id', $user->id)
+                        ->where('event_type', 'check_in')
+                        ->whereNull('pair_event_id')
+                        ->where('event_time', '<=', $originalStartTime) // Use original time to find the check-in
+                        ->latest('event_time')
+                        ->first();
+
+                    if ($checkIn) {
+                        // If check-in time is later than new start time, update it
+                        if ($checkIn->event_time->gt($startDateTime)) {
+                            $checkIn->update(['event_time' => $startDateTime]);
+                        }
+
+                        $checkOut = PresenceEvent::create([
+                            'user_id' => $user->id,
+                            'workplace_id' => $checkIn->workplace_id,
+                            'event_type' => 'check_out',
+                            'event_time' => $endDateTime,
+                            'method' => 'kiosk_schedule',
+                            'pair_event_id' => $checkIn->id,
+                        ]);
+                        $checkIn->update(['pair_event_id' => $checkOut->id]);
+                    }
+
+                } else {
+                    // Middle or Last Day
+
+                    // 1. CheckIn + DelegationStart
+                    $checkIn = PresenceEvent::create([
+                        'user_id' => $user->id,
+                        'workplace_id' => $latestDelegationStart->workplace_id,
+                        'event_type' => 'check_in',
+                        'event_time' => $startDateTime,
+                        'method' => 'kiosk_schedule',
+                    ]);
+
+                    $delegationStart = PresenceEvent::create([
+                        'user_id' => $user->id,
+                        'workplace_id' => $latestDelegationStart->workplace_id,
+                        'event_type' => 'delegation_start',
+                        'event_time' => $startDateTime,
+                        'method' => 'kiosk_schedule',
+                    ]);
+
+                    if ($isLastDay) {
+                        // Last Day: DelegationEnd Only (User stays checked in)
+                        $delegationEnd = PresenceEvent::create([
+                            'user_id' => $user->id,
+                            'workplace_id' => $latestDelegationStart->workplace_id,
+                            'event_type' => 'delegation_end',
+                            'event_time' => $endDateTime,
+                            'method' => 'kiosk_schedule',
+                            'pair_event_id' => $delegationStart->id,
+                        ]);
+                        $delegationStart->update(['pair_event_id' => $delegationEnd->id]);
+
+                        // CheckIn remains unpaired (Active)
+                    } else {
+                        // Middle Day: DelegationEnd + CheckOut
+                        $delegationEnd = PresenceEvent::create([
+                            'user_id' => $user->id,
+                            'workplace_id' => $latestDelegationStart->workplace_id,
+                            'event_type' => 'delegation_end',
+                            'event_time' => $endDateTime,
+                            'method' => 'kiosk_schedule',
+                            'pair_event_id' => $delegationStart->id,
+                        ]);
+                        $delegationStart->update(['pair_event_id' => $delegationEnd->id]);
+
+                        $checkOut = PresenceEvent::create([
+                            'user_id' => $user->id,
+                            'workplace_id' => $latestDelegationStart->workplace_id,
+                            'event_type' => 'check_out',
+                            'event_time' => $endDateTime,
+                            'method' => 'kiosk_schedule',
+                            'pair_event_id' => $checkIn->id,
+                        ]);
+                        $checkIn->update(['pair_event_id' => $checkOut->id]);
+                    }
+                }
+            }
+        });
+    }
 }

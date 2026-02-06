@@ -43,6 +43,7 @@ Route::middleware([
     Route::prefix('kiosk')->group(function () {
         Route::get('/dashboard', [KioskController::class, 'getDashboardData']);
         Route::post('/submit-code', [KioskController::class, 'submitCode']);
+        Route::post('/end-delegation-schedule', [KioskController::class, 'endDelegationWithSchedule']);
         Route::get('/vehicles', [KioskController::class, 'getVehicles']);
         Route::get('/saved-places', [KioskController::class, 'getSavedPlaces']);
     });
