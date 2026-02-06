@@ -34,6 +34,11 @@ const Home = () => {
         return;
       }
 
+      if (selectedFlow === 'concediu' && response.data.user) {
+        navigate('/concediu', { state: { user: response.data.user, code } });
+        return;
+      }
+
       if (response.data.type === 'delegation_end_schedule_required') {
         navigate('/delegation-schedule', { state: { ...response.data, code } });
         return;

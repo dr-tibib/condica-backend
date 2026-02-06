@@ -31,8 +31,12 @@ const FlowSelector = ({ selectedFlow, onSelectFlow }: FlowSelectorProps) => {
         <span className="text-2xl font-bold">Delegație</span>
       </button>
       <button 
-        className="flex items-center justify-center gap-2 py-4 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-xl shadow-sm border-2 border-slate-200 dark:border-slate-700 cursor-not-allowed"
-        disabled
+        onClick={() => onSelectFlow('concediu')}
+        className={`flex items-center justify-center gap-2 py-4 rounded-xl shadow-md border-2 transition-all active:scale-95 ${
+            selectedFlow === 'concediu'
+              ? 'bg-primary text-white border-primary'
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+        }`}
       >
         <span className="material-symbols-outlined text-3xl">event_available</span>
         <span className="text-2xl font-bold">Concediu</span>

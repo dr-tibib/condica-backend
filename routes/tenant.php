@@ -46,6 +46,7 @@ Route::middleware([
         Route::post('/end-delegation-schedule', [KioskController::class, 'endDelegationWithSchedule']);
         Route::get('/vehicles', [KioskController::class, 'getVehicles']);
         Route::get('/saved-places', [KioskController::class, 'getSavedPlaces']);
+        Route::post('/leave-request', [KioskController::class, 'storeLeaveRequest']);
     });
 
     Route::prefix('delegations')->group(function () {

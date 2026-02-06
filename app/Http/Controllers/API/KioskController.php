@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Delegation;
 use App\Models\DelegationPlace;
 use App\Models\LeaveRequest;
+use App\Models\LeaveType;
 use App\Models\PresenceEvent;
 use App\Models\User;
 use App\Models\Vehicle;
@@ -101,7 +102,7 @@ class KioskController extends Controller
 
         $validated = $request->validate([
             'code' => ['required', 'string', "digits:{$codeLength}"],
-            'flow' => ['nullable', 'string', 'in:regular,delegation'],
+            'flow' => ['nullable', 'string', 'in:regular,delegation,concediu'],
             'workplace_id' => ['nullable', 'exists:workplaces,id'],
             'device_info' => ['nullable', 'array'],
         ]);
@@ -117,11 +118,11 @@ class KioskController extends Controller
             ], 404);
         }
 
-        if ($flow === 'delegation') {
+        if ($flow === 'delegation' || $flow === 'concediu') {
             $latestEvent = $user->latestPresenceEvent;
             $isDelegated = $latestEvent && $latestEvent->isDelegationStart();
 
-            if ($isDelegated) {
+            if ($flow === 'delegation' && $isDelegated) {
                 // Check duration for long delegations
                 $start = $latestEvent->event_time;
                 $now = now();
@@ -264,6 +265,53 @@ class KioskController extends Controller
         }
     }
 
+    public function storeLeaveRequest(Request $request): JsonResponse
+    {
+        // Get configured code length, default to 3
+        $tenantData = tenant()->data ?? [];
+        $codeLength = (int) ($tenantData['code_length'] ?? 3);
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'code' => ['required', 'string', "digits:{$codeLength}"],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+        ]);
+
+        $user = User::find($validated['user_id']);
+
+        if ($user->workplace_enter_code !== $validated['code']) {
+            return response()->json(['message' => 'Invalid code.'], 403);
+        }
+
+        // Find default leave type (e.g. Concediu de Odihna)
+        $leaveType = LeaveType::where('affects_annual_quota', true)->first()
+            ?? LeaveType::first();
+
+        if (!$leaveType) {
+            return response()->json(['message' => 'No leave types configured.'], 500);
+        }
+
+        // Calculate total days (naive implementation, manager can adjust)
+        $start = \Carbon\Carbon::parse($validated['start_date']);
+        $end = \Carbon\Carbon::parse($validated['end_date']);
+        $diff = $start->diffInDays($end) + 1;
+
+        $leaveRequest = LeaveRequest::create([
+            'user_id' => $validated['user_id'],
+            'leave_type_id' => $leaveType->id,
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'total_days' => $diff,
+            'status' => 'APPROVED',
+        ]);
+
+        return response()->json([
+            'message' => 'Leave request created successfully.',
+            'data' => $leaveRequest,
+        ]);
+    }
+          
     public function endDelegationWithSchedule(Request $request): JsonResponse
     {
         // Get configured code length, default to 3
