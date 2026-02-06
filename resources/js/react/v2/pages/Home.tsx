@@ -34,6 +34,11 @@ const Home = () => {
         return;
       }
 
+      if (selectedFlow === 'concediu' && response.data.user) {
+        navigate('/concediu', { state: { user: response.data.user, code } });
+        return;
+      }
+
       setSuccess(response.data.message);
       setLastActionTime(Date.now());
       setCode('');

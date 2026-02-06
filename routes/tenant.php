@@ -45,6 +45,7 @@ Route::middleware([
         Route::post('/submit-code', [KioskController::class, 'submitCode']);
         Route::get('/vehicles', [KioskController::class, 'getVehicles']);
         Route::get('/saved-places', [KioskController::class, 'getSavedPlaces']);
+        Route::post('/leave-request', [KioskController::class, 'storeLeaveRequest']);
     });
 
     Route::prefix('delegations')->group(function () {
