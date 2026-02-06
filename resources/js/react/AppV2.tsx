@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import Home from './v2/pages/Home';
 import DelegationWizard from './v2/pages/DelegationWizard';
 import ConcediuWizard from './v2/pages/ConcediuWizard';
+import DelegationSchedule from './v2/pages/DelegationSchedule';
 import LoginScreen from './pages/LoginScreen';
 import KioskSetupScreen from './pages/KioskSetupScreen';
 import { getKioskWorkplaceId } from './utils/kiosk';
@@ -26,6 +27,7 @@ function AppV2() {
         <Route path="/" element={<KioskGuard><Home /></KioskGuard>} />
         <Route path="/delegation" element={<KioskGuard><DelegationWizard /></KioskGuard>} />
         <Route path="/concediu" element={<KioskGuard><ConcediuWizard /></KioskGuard>} />
+        <Route path="/delegation-schedule" element={<KioskGuard><DelegationSchedule /></KioskGuard>} />
       </Routes>
     </Router>
   );

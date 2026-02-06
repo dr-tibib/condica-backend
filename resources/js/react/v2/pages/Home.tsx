@@ -39,6 +39,11 @@ const Home = () => {
         return;
       }
 
+      if (response.data.type === 'delegation_end_schedule_required') {
+        navigate('/delegation-schedule', { state: { ...response.data, code } });
+        return;
+      }
+
       setSuccess(response.data.message);
       setLastActionTime(Date.now());
       setCode('');
