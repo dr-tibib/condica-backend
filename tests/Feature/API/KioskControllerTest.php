@@ -150,30 +150,39 @@ class KioskControllerTest extends TenantTestCase
             ->assertJson(['code_length' => 3]);
     }
 
-    public function test_start_delegation()
+    public function test_submit_code_delegation_flow_when_already_in_delegation()
     {
         $tenant = Tenant::first();
         $workplace = Workplace::factory()->create();
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'workplace_enter_code' => '888',
+            'default_workplace_id' => $workplace->id,
+        ]);
+
+        // Start delegation
+        $user->presenceEvents()->create([
+            'workplace_id' => $workplace->id,
+            'event_type' => 'delegation_start',
+            'event_time' => now()->subHour(),
+            'method' => 'kiosk',
+        ]);
 
         $domain = $tenant->domains->first()->domain;
-        $response = $this->postJson("http://{$domain}/api/kiosk/delegation", [
-            'user_id' => $user->id,
-            'workplace_id' => $workplace->id,
+        $response = $this->postJson("http://{$domain}/api/kiosk/submit-code", [
+            'code' => '888',
+            'flow' => 'delegation',
         ]);
 
         $response->assertStatus(200)
             ->assertJson([
-                'type' => 'delegation-start',
-                'message' => 'Delegation started successfully.',
+                'message' => 'Delegation ended successfully.',
+                'type' => 'delegation_end',
                 'user' => ['name' => $user->name],
             ]);
 
         $this->assertDatabaseHas('presence_events', [
             'user_id' => $user->id,
-            'event_type' => 'check_in',
-            'workplace_id' => $workplace->id,
-            'notes' => 'Delegation Start',
+            'event_type' => 'delegation_end',
         ]);
     }
 }

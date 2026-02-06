@@ -28,7 +28,7 @@ const Home = () => {
         workplace_id: workplaceId,
       });
       
-      if (selectedFlow === 'delegation' && response.data.user) {
+      if (selectedFlow === 'delegation' && response.data.user && !response.data.type) {
         // Navigate to delegation wizard with user info
         navigate('/delegation', { state: { user: response.data.user } });
         return;
