@@ -122,7 +122,56 @@ class KioskController extends Controller
             $isDelegated = $latestEvent && $latestEvent->isDelegationStart();
 
             if ($isDelegated) {
-                // End delegation
+                // Check duration for long delegations
+                $start = $latestEvent->event_time;
+                $now = now();
+                $durationHours = $start->diffInHours($now);
+
+                if ($durationHours > 24) {
+                    // Fetch Shift Settings
+                    $shiftStart = \Backpack\Settings\app\Models\Setting::get('shift_start') ?? '08:00';
+                    $shiftEnd = \Backpack\Settings\app\Models\Setting::get('shift_end') ?? '17:00';
+
+                    // Generate Dates
+                    $dates = [];
+                    $period = \Carbon\CarbonPeriod::create($start->copy()->startOfDay(), '1 day', $now->copy()->startOfDay());
+
+                    foreach ($period as $date) {
+                        $d = $date->format('Y-m-d');
+                        $defaultStart = $shiftStart;
+                        $defaultEnd = $shiftEnd;
+
+                        if ($date->isSameDay($start)) {
+                            $defaultStart = $start->format('H:i');
+                        }
+                        if ($date->isSameDay($now)) {
+                            $defaultEnd = $now->format('H:i');
+                        }
+
+                        $dates[] = [
+                            'date' => $d,
+                            'start' => $defaultStart,
+                            'end' => $defaultEnd,
+                        ];
+                    }
+
+                    return response()->json([
+                        'message' => 'Delegation spans multiple days.',
+                        'type' => 'delegation_end_schedule_required',
+                        'user' => [
+                            'name' => $user->name,
+                            'id' => $user->id,
+                        ],
+                        'delegation_start_time' => $start->format('Y-m-d H:i:s'),
+                        'schedule_days' => $dates,
+                        'shift_settings' => [
+                            'start' => $shiftStart,
+                            'end' => $shiftEnd,
+                        ],
+                    ]);
+                }
+
+                // End delegation normal flow
                 $event = $this->presenceService->delegationEndOnly($user, [
                     'method' => 'kiosk',
                     'device_info' => $validated['device_info'] ?? null,
@@ -209,6 +258,43 @@ class KioskController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Kiosk check-in/out error: ' . $e->getMessage());
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    public function endDelegationWithSchedule(Request $request): JsonResponse
+    {
+        // Get configured code length, default to 3
+        $tenantData = tenant()->data ?? [];
+        $codeLength = (int) ($tenantData['code_length'] ?? 3);
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'schedule' => ['required', 'array'],
+            'schedule.*.date' => ['required', 'date_format:Y-m-d'],
+            'schedule.*.start_time' => ['required', 'date_format:H:i'],
+            'schedule.*.end_time' => ['required', 'date_format:H:i'],
+            'code' => ['required', 'string', "digits:{$codeLength}"],
+        ]);
+
+        $user = User::findOrFail($validated['user_id']);
+
+        if ($user->workplace_enter_code !== $validated['code']) {
+            return response()->json([
+                'message' => 'Invalid code.',
+            ], 403);
+        }
+
+        try {
+            $this->presenceService->endDelegationWithSchedule($user, $validated['schedule']);
+
+            return response()->json([
+                'message' => 'Delegation ended successfully.',
+                'type' => 'delegation_end',
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'message' => $e->getMessage(),
             ], 400);
