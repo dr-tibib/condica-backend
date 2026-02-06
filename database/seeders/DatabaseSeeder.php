@@ -2,24 +2,44 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Database\Seeders\Tenant\LeavePermissionSeeder;
+use Database\Seeders\Tenant\LeaveManagementSeeder;
+use Database\Seeders\Tenant\KioskAdminRoleSeeder;
+use Database\Seeders\Tenant\TenantSettingsSeeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Check if we are in a tenant context
+        $isTenant = false;
+        if (function_exists('tenant') && tenant()) {
+            $isTenant = true;
+        }
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        if ($isTenant) {
+            $this->runTenantSeeders();
+        } else {
+            $this->runCentralSeeders();
+        }
+    }
+
+    private function runTenantSeeders(): void
+    {
+        $this->call([
+            LeavePermissionSeeder::class,
+            LeaveManagementSeeder::class,
+            KioskAdminRoleSeeder::class,
+            TenantSettingsSeeder::class,
         ]);
+    }
+
+    private function runCentralSeeders(): void
+    {
+        // Central seeders will be empty for now
     }
 }
