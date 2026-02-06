@@ -121,6 +121,24 @@ class KioskController extends Controller
             $latestEvent = $user->latestPresenceEvent;
             $isDelegated = $latestEvent && $latestEvent->isDelegationStart();
 
+            if ($isDelegated) {
+                // End delegation
+                $event = $this->presenceService->delegationEndOnly($user, [
+                    'method' => 'kiosk',
+                    'device_info' => $validated['device_info'] ?? null,
+                ]);
+
+                return response()->json([
+                    'message' => 'Delegation ended successfully.',
+                    'type' => 'delegation_end',
+                    'user' => [
+                        'name' => $user->name,
+                    ],
+                    'time' => $event->event_time->format('g:i A'),
+                    'event' => $event,
+                ]);
+            }
+
             return response()->json([
                 'message' => 'User verified.',
                 'user' => [
