@@ -23,20 +23,20 @@ return new class extends Migration
 
         Schema::create('leave_balances', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
             $table->integer('year');
             $table->float('total_entitlement')->default(21);
             $table->float('carried_over')->default(0);
             $table->float('taken')->default(0);
             $table->timestamps();
 
-            $table->unique(['user_id', 'year']);
+            $table->unique(['employee_id', 'year']);
         });
 
         Schema::create('leave_requests', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('approver_id')->nullable()->constrained('employees')->nullOnDelete();
             $table->foreignId('leave_type_id')->constrained()->restrictOnDelete();
             $table->date('start_date');
             $table->date('end_date');

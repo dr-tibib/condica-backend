@@ -12,7 +12,7 @@ class LeaveBalance extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
+        'employee_id',
         'year',
         'total_entitlement',
         'carried_over',
@@ -25,8 +25,8 @@ class LeaveBalance extends Model
         'taken' => 'float',
     ];
 
-    public function user()
+    public function employee()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Employee::class);
     }
 }

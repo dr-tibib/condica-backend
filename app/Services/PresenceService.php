@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\PresenceEvent;
-use App\Models\User;
 use App\Models\Workplace;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -14,16 +14,16 @@ use Illuminate\Validation\ValidationException;
 class PresenceService
 {
     /**
-     * Process a user check-in.
+     * Process an employee check-in.
      *
      * @param  array<string, mixed>  $data
      *
      * @throws ValidationException
      */
-    public function checkIn(User $user, array $data): PresenceEvent
+    public function checkIn(Employee $employee, array $data): PresenceEvent
     {
-        // Check if user is on approved leave today
-        $onLeave = LeaveRequest::where('user_id', $user->id)
+        // Check if employee is on approved leave today
+        $onLeave = LeaveRequest::where('employee_id', $employee->id)
             ->where('status', 'APPROVED')
             ->whereDate('start_date', '<=', now())
             ->whereDate('end_date', '>=', now())
@@ -54,18 +54,18 @@ class PresenceService
             }
         }
 
-        // Check if user is already checked in
+        // Check if employee is already checked in
         // Allow delegation_start to proceed even if checked in (it starts a nested/parallel event or switches context)
-        $latestEvent = $user->latestPresenceEvent;
+        $latestEvent = $employee->latestPresenceEvent;
         if ($eventType !== 'delegation_start' && $latestEvent && ($latestEvent->isCheckIn())) {
             throw ValidationException::withMessages([
                 'status' => ['You are already checked in. Please check out first.'],
             ]);
         }
 
-        return DB::transaction(function () use ($user, $data, $eventType, $workplaceId) {
+        return DB::transaction(function () use ($employee, $data, $eventType, $workplaceId) {
             return PresenceEvent::create([
-                'user_id' => $user->id,
+                'employee_id' => $employee->id,
                 'workplace_id' => $workplaceId,
                 'event_type' => $eventType,
                 'event_time' => now(),
@@ -81,16 +81,16 @@ class PresenceService
     }
 
     /**
-     * Process a user check-out.
+     * Process an employee check-out.
      *
      * @param  array<string, mixed>  $data
      *
      * @throws ValidationException
      */
-    public function checkOut(User $user, array $data): PresenceEvent
+    public function checkOut(Employee $employee, array $data): PresenceEvent
     {
         // Get the latest unpaired check-in event
-        $latestCheckIn = $user->presenceEvents()
+        $latestCheckIn = $employee->presenceEvents()
             ->whereIn('event_type', ['check_in', 'delegation_start'])
             ->whereNull('pair_event_id')
             ->latest('event_time')
@@ -117,9 +117,9 @@ class PresenceService
             }
         }
 
-        return DB::transaction(function () use ($user, $latestCheckIn, $data, $eventType) {
+        return DB::transaction(function () use ($employee, $latestCheckIn, $data, $eventType) {
             $checkOut = PresenceEvent::create([
-                'user_id' => $user->id,
+                'employee_id' => $employee->id,
                 'workplace_id' => $latestCheckIn->workplace_id,
                 'event_type' => $eventType,
                 'event_time' => now(),
@@ -145,9 +145,9 @@ class PresenceService
     /**
      * End a delegation without checking out completely.
      */
-    public function delegationEndOnly(User $user, array $data): PresenceEvent
+    public function delegationEndOnly(Employee $employee, array $data): PresenceEvent
     {
-        $latestCheckIn = $user->presenceEvents()
+        $latestCheckIn = $employee->presenceEvents()
             ->where('event_type', 'delegation_start')
             ->whereNull('pair_event_id')
             ->latest('event_time')
@@ -159,9 +159,9 @@ class PresenceService
             ]);
         }
 
-        return DB::transaction(function () use ($user, $latestCheckIn, $data) {
+        return DB::transaction(function () use ($employee, $latestCheckIn, $data) {
             $delegationEnd = PresenceEvent::create([
-                'user_id' => $user->id,
+                'employee_id' => $employee->id,
                 'workplace_id' => $latestCheckIn->workplace_id,
                 'event_type' => 'delegation_end',
                 'event_time' => now(),
@@ -189,9 +189,9 @@ class PresenceService
      *
      * @param  array<int, array{date: string, start_time: string, end_time: string}>  $schedule
      */
-    public function endDelegationWithSchedule(User $user, array $schedule): void
+    public function endDelegationWithSchedule(Employee $employee, array $schedule): void
     {
-        $latestDelegationStart = $user->presenceEvents()
+        $latestDelegationStart = $employee->presenceEvents()
             ->where('event_type', 'delegation_start')
             ->whereNull('pair_event_id')
             ->latest('event_time')
@@ -203,7 +203,7 @@ class PresenceService
             ]);
         }
 
-        DB::transaction(function () use ($user, $schedule, $latestDelegationStart) {
+        DB::transaction(function () use ($employee, $schedule, $latestDelegationStart) {
             foreach ($schedule as $index => $day) {
                 $date = $day['date'];
                 $startTime = $day['start_time']; // H:i
@@ -225,7 +225,7 @@ class PresenceService
 
                     // Close First Day: DelegationEnd + CheckOut at endDateTime.
                     $delegationEnd = PresenceEvent::create([
-                        'user_id' => $user->id,
+                        'employee_id' => $employee->id,
                         'workplace_id' => $latestDelegationStart->workplace_id,
                         'event_type' => 'delegation_end',
                         'event_time' => $endDateTime,
@@ -235,7 +235,7 @@ class PresenceService
                     $latestDelegationStart->update(['pair_event_id' => $delegationEnd->id]);
 
                     // Close the open CheckIn corresponding to this session
-                    $checkIn = PresenceEvent::where('user_id', $user->id)
+                    $checkIn = PresenceEvent::where('employee_id', $employee->id)
                         ->where('event_type', 'check_in')
                         ->whereNull('pair_event_id')
                         ->where('event_time', '<=', $originalStartTime) // Use original time to find the check-in
@@ -249,7 +249,7 @@ class PresenceService
                         }
 
                         $checkOut = PresenceEvent::create([
-                            'user_id' => $user->id,
+                            'employee_id' => $employee->id,
                             'workplace_id' => $checkIn->workplace_id,
                             'event_type' => 'check_out',
                             'event_time' => $endDateTime,
@@ -264,7 +264,7 @@ class PresenceService
 
                     // 1. CheckIn + DelegationStart
                     $checkIn = PresenceEvent::create([
-                        'user_id' => $user->id,
+                        'employee_id' => $employee->id,
                         'workplace_id' => $latestDelegationStart->workplace_id,
                         'event_type' => 'check_in',
                         'event_time' => $startDateTime,
@@ -272,7 +272,7 @@ class PresenceService
                     ]);
 
                     $delegationStart = PresenceEvent::create([
-                        'user_id' => $user->id,
+                        'employee_id' => $employee->id,
                         'workplace_id' => $latestDelegationStart->workplace_id,
                         'event_type' => 'delegation_start',
                         'event_time' => $startDateTime,
@@ -280,9 +280,9 @@ class PresenceService
                     ]);
 
                     if ($isLastDay) {
-                        // Last Day: DelegationEnd Only (User stays checked in)
+                        // Last Day: DelegationEnd Only (Employee stays checked in)
                         $delegationEnd = PresenceEvent::create([
-                            'user_id' => $user->id,
+                            'employee_id' => $employee->id,
                             'workplace_id' => $latestDelegationStart->workplace_id,
                             'event_type' => 'delegation_end',
                             'event_time' => $endDateTime,
@@ -295,7 +295,7 @@ class PresenceService
                     } else {
                         // Middle Day: DelegationEnd + CheckOut
                         $delegationEnd = PresenceEvent::create([
-                            'user_id' => $user->id,
+                            'employee_id' => $employee->id,
                             'workplace_id' => $latestDelegationStart->workplace_id,
                             'event_type' => 'delegation_end',
                             'event_time' => $endDateTime,
@@ -305,7 +305,7 @@ class PresenceService
                         $delegationStart->update(['pair_event_id' => $delegationEnd->id]);
 
                         $checkOut = PresenceEvent::create([
-                            'user_id' => $user->id,
+                            'employee_id' => $employee->id,
                             'workplace_id' => $latestDelegationStart->workplace_id,
                             'event_type' => 'check_out',
                             'event_time' => $endDateTime,

@@ -23,7 +23,7 @@ class PresenceEvent extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'user_id',
+        'employee_id',
         'workplace_id',
         'event_type',
         'event_time',
@@ -54,11 +54,11 @@ class PresenceEvent extends Model
     }
 
     /**
-     * Get the user that owns this presence event.
+     * Get the employee that owns this presence event.
      */
-    public function user(): BelongsTo
+    public function employee(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Employee::class);
     }
 
     /**
@@ -102,11 +102,11 @@ class PresenceEvent extends Model
     }
 
     /**
-     * Scope a query to only include events for a specific user.
+     * Scope a query to only include events for a specific employee.
      */
-    public function scopeForUser(Builder $query, int $userId): void
+    public function scopeForEmployee(Builder $query, int $employeeId): void
     {
-        $query->where('user_id', $userId);
+        $query->where('employee_id', $employeeId);
     }
 
     /**

@@ -1,23 +1,23 @@
 <?php
 
 use App\Models\Department;
-use App\Models\User;
+use App\Models\Employee;
 use App\Models\Tenant;
 use Tests\TenantTestCase;
 
 uses(TenantTestCase::class);
 
-test('a user can be created with all romanian legal fields', function () {
+test('an employee can be created with all romanian legal fields', function () {
     // Create a department
     $department = Department::create([
         'name' => 'IT Department',
         'description' => 'Information Technology',
     ]);
 
-    $userData = [
-        'name' => 'Ion Popescu',
+    $employeeData = [
+        'first_name' => 'Ion',
+        'last_name' => 'Popescu',
         'email' => 'ion@example.com',
-        'password' => bcrypt('password'),
         'address' => 'Str. Principala, Nr. 1',
         'id_document_type' => 'CI',
         'id_document_number' => 'RX123456',
@@ -26,9 +26,9 @@ test('a user can be created with all romanian legal fields', function () {
         'department_id' => $department->id,
     ];
 
-    $user = User::create($userData);
+    $employee = Employee::create($employeeData);
 
-    expect($user->fresh())
+    expect($employee->fresh())
         ->address->toBe('Str. Principala, Nr. 1')
         ->id_document_type->toBe('CI')
         ->id_document_number->toBe('RX123456')
@@ -37,20 +37,20 @@ test('a user can be created with all romanian legal fields', function () {
         ->department_id->toBe($department->id);
 });
 
-test('user relationship to department works', function () {
+test('employee relationship to department works', function () {
     $department = Department::create([
         'name' => 'HR',
     ]);
 
-    $user = User::create([
-        'name' => 'Maria Ionescu',
+    $employee = Employee::create([
+        'first_name' => 'Maria',
+        'last_name' => 'Ionescu',
         'email' => 'maria@example.com',
-        'password' => bcrypt('password'),
         'department_id' => $department->id,
     ]);
 
-    expect($user->department)->toBeInstanceOf(Department::class)
-        ->and($user->department->name)->toBe('HR');
+    expect($employee->department)->toBeInstanceOf(Department::class)
+        ->and($employee->department->name)->toBe('HR');
 });
 
 test('data isolation between tenants', function () {
@@ -87,14 +87,8 @@ test('data isolation between tenants', function () {
     expect(Department::where('name', 'Tenant A Dept')->count())->toBe(1);
 
     // Cleanup Tenant B
-    tenancy()->end(); // End Tenant A (handled by tearDown, but we switched)
-    // Actually tearDown handles current tenant. But we created B manually.
-    // TenantTestCase tearDown deletes $this->tenant. We need to delete tenantB manually if we don't assign it to this->tenant.
+    tenancy()->end();
 
     $tenantB->domains()->delete();
     $tenantB->delete();
-
-    // Re-initialize original tenant to avoid tearDown issues if needed,
-    // but tearDown checks isset($this->tenant).
-    // We just need to make sure we don't leave mess.
 });

@@ -24,8 +24,11 @@ class PresenceController extends Controller
      */
     public function checkIn(CheckInRequest $request): JsonResponse
     {
+        $employee = $request->user()->employee;
+        if (!$employee) return response()->json(['message' => 'Employee profile not found'], 404);
+
         $event = $this->presenceService->checkIn(
-            $request->user(),
+            $employee,
             $request->validated()
         );
 
@@ -40,8 +43,11 @@ class PresenceController extends Controller
      */
     public function checkOut(CheckOutRequest $request): JsonResponse
     {
+        $employee = $request->user()->employee;
+        if (!$employee) return response()->json(['message' => 'Employee profile not found'], 404);
+
         $event = $this->presenceService->checkOut(
-            $request->user(),
+            $employee,
             $request->validated()
         );
 
@@ -56,8 +62,18 @@ class PresenceController extends Controller
      */
     public function current(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $latestEvent = $user->latestPresenceEvent;
+        $employee = $request->user()->employee;
+
+        if (!$employee) {
+             return response()->json([
+                'is_present' => false,
+                'latest_event' => null,
+                'current_workplace' => null,
+                'duration_minutes' => null,
+            ], 200);
+        }
+
+        $latestEvent = $employee->latestPresenceEvent;
 
         if (! $latestEvent) {
             return response()->json([
@@ -69,7 +85,7 @@ class PresenceController extends Controller
         }
 
         $isPresent = $latestEvent->event_type === 'check_in';
-        $currentWorkplace = $isPresent ? $user->getCurrentWorkplace() : null;
+        $currentWorkplace = $isPresent ? $employee->getCurrentWorkplace() : null;
         $durationMinutes = null;
 
         if ($isPresent && $latestEvent->event_time) {
@@ -89,7 +105,12 @@ class PresenceController extends Controller
      */
     public function history(Request $request): AnonymousResourceCollection
     {
-        $events = $request->user()
+        $employee = $request->user()->employee;
+        if (!$employee) {
+             return PresenceEventResource::collection([]);
+        }
+
+        $events = $employee
             ->presenceEvents()
             ->with('workplace')
             ->orderBy('event_time', 'desc')
@@ -103,14 +124,19 @@ class PresenceController extends Controller
      */
     public function today(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $events = $user->presenceEvents()
+        $employee = $request->user()->employee;
+
+        if (!$employee) {
+             return response()->json(['message' => 'Employee profile not found'], 404);
+        }
+
+        $events = $employee->presenceEvents()
             ->with('workplace')
             ->whereDate('event_time', today())
             ->orderBy('event_time', 'asc')
             ->get();
 
-        $totalMinutes = $user->getTodayMinutes();
+        $totalMinutes = $employee->getTodayMinutes();
 
         $sessions = [];
         $currentCheckIn = null;
@@ -141,7 +167,7 @@ class PresenceController extends Controller
         // Target: 8 hours (480 mins) per day * number of days passed in week (inclusive)
         $dayOfWeek = now()->dayOfWeekIso; // 1 (Mon) to 7 (Sun)
         $targetMinutes = $dayOfWeek * 480;
-        $weeklyMinutes = $user->getWeekMinutes();
+        $weeklyMinutes = $employee->getWeekMinutes();
 
         $onTrack = 'on_track';
         if ($weeklyMinutes > $targetMinutes + 60) {

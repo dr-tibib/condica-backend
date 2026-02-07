@@ -19,7 +19,7 @@ class Device extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'user_id',
+        'employee_id',
         'device_token',
         'device_name',
         'platform',
@@ -41,10 +41,10 @@ class Device extends Model
     }
 
     /**
-     * Get the user that owns this device.
+     * Get the employee that owns this device.
      */
-    public function user(): BelongsTo
+    public function employee(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Employee::class);
     }
 }

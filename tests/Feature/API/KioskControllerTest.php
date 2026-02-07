@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\API;
 
+use App\Models\Employee;
 use App\Models\Tenant;
-use App\Models\User;
 use App\Models\Workplace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -25,10 +25,14 @@ class KioskControllerTest extends TenantTestCase
         // We test with default length (3).
 
         $workplace = Workplace::factory()->create();
-        $user = User::factory()->create([
+        $employee = Employee::factory()->create([
             'workplace_enter_code' => '123',
-            'default_workplace_id' => $workplace->id,
+            'workplace_id' => $workplace->id,
         ]);
+
+        // Debug info
+        // dump('Current DB Connection: ' . config('database.default'));
+        // dump('Employees in DB: ', Employee::all()->toArray());
 
         $domain = $tenant->domains->first()->domain;
         $response = $this->postJson("http://{$domain}/api/kiosk/submit-code", [
@@ -40,11 +44,11 @@ class KioskControllerTest extends TenantTestCase
             ->assertJson([
                 'type' => 'checkin',
                 'message' => 'Checked in successfully.',
-                'user' => ['name' => $user->name],
+                'user' => ['name' => $employee->name],
             ]);
 
         $this->assertDatabaseHas('presence_events', [
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'event_type' => 'check_in',
             'workplace_id' => $workplace->id,
         ]);
@@ -55,13 +59,13 @@ class KioskControllerTest extends TenantTestCase
         $tenant = Tenant::first();
 
         $workplace = Workplace::factory()->create();
-        $user = User::factory()->create([
+        $employee = Employee::factory()->create([
             'workplace_enter_code' => '567',
-            'default_workplace_id' => $workplace->id,
+            'workplace_id' => $workplace->id,
         ]);
 
         // Check in first
-        $user->presenceEvents()->create([
+        $employee->presenceEvents()->create([
             'workplace_id' => $workplace->id,
             'event_type' => 'check_in',
             'event_time' => now()->subHour(),
@@ -78,11 +82,11 @@ class KioskControllerTest extends TenantTestCase
             ->assertJson([
                 'type' => 'checkout',
                 'message' => 'Checked out successfully.',
-                'user' => ['name' => $user->name],
+                'user' => ['name' => $employee->name],
             ]);
 
         $this->assertDatabaseHas('presence_events', [
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'event_type' => 'check_out',
         ]);
     }
@@ -117,7 +121,7 @@ class KioskControllerTest extends TenantTestCase
     {
         $tenant = Tenant::first();
 
-        $user = User::factory()->create([
+        $employee = Employee::factory()->create([
             'workplace_enter_code' => '999',
         ]);
 
@@ -130,12 +134,12 @@ class KioskControllerTest extends TenantTestCase
         $response->assertStatus(200)
             ->assertJson([
                 'message' => 'User verified.',
-                'user' => ['id' => $user->id, 'name' => $user->name],
+                'user' => ['id' => $employee->id, 'name' => $employee->name],
             ]);
 
         // Verify no check-in happened
         $this->assertDatabaseMissing('presence_events', [
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
         ]);
     }
 
@@ -154,13 +158,13 @@ class KioskControllerTest extends TenantTestCase
     {
         $tenant = Tenant::first();
         $workplace = Workplace::factory()->create();
-        $user = User::factory()->create([
+        $employee = Employee::factory()->create([
             'workplace_enter_code' => '888',
-            'default_workplace_id' => $workplace->id,
+            'workplace_id' => $workplace->id,
         ]);
 
         // Start delegation
-        $user->presenceEvents()->create([
+        $employee->presenceEvents()->create([
             'workplace_id' => $workplace->id,
             'event_type' => 'delegation_start',
             'event_time' => now()->subHour(),
@@ -177,11 +181,11 @@ class KioskControllerTest extends TenantTestCase
             ->assertJson([
                 'message' => 'Delegation ended successfully.',
                 'type' => 'delegation_end',
-                'user' => ['name' => $user->name],
+                'user' => ['name' => $employee->name],
             ]);
 
         $this->assertDatabaseHas('presence_events', [
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'event_type' => 'delegation_end',
         ]);
     }
