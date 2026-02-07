@@ -44,7 +44,7 @@ class KioskControllerTest extends TenantTestCase
             ->assertJson([
                 'type' => 'checkin',
                 'message' => 'Checked in successfully.',
-                'user' => ['name' => $employee->name],
+                'employee' => ['name' => $employee->name],
             ]);
 
         $this->assertDatabaseHas('presence_events', [
@@ -82,7 +82,7 @@ class KioskControllerTest extends TenantTestCase
             ->assertJson([
                 'type' => 'checkout',
                 'message' => 'Checked out successfully.',
-                'user' => ['name' => $employee->name],
+                'employee' => ['name' => $employee->name],
             ]);
 
         $this->assertDatabaseHas('presence_events', [
@@ -134,7 +134,7 @@ class KioskControllerTest extends TenantTestCase
         $response->assertStatus(200)
             ->assertJson([
                 'message' => 'User verified.',
-                'user' => ['id' => $employee->id, 'name' => $employee->name],
+                'employee' => ['id' => $employee->id, 'name' => $employee->name],
             ]);
 
         // Verify no check-in happened
@@ -181,7 +181,7 @@ class KioskControllerTest extends TenantTestCase
             ->assertJson([
                 'message' => 'Delegation ended successfully.',
                 'type' => 'delegation_end',
-                'user' => ['name' => $employee->name],
+                'employee' => ['name' => $employee->name],
             ]);
 
         $this->assertDatabaseHas('presence_events', [

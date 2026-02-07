@@ -48,7 +48,7 @@ class KioskController extends Controller
             ->map(function ($event) {
                 return [
                     'id' => $event->id,
-                    'user' => $event->employee->name ?? 'Unknown',
+                    'employee' => $event->employee->name ?? 'Unknown',
                     'time' => $event->event_time->format('H:i'),
                     'type' => $event->event_type,
                 ];
@@ -63,7 +63,7 @@ class KioskController extends Controller
             ->map(function ($leave) {
                 return [
                     'id' => $leave->id,
-                    'user' => $leave->employee->name ?? 'Unknown',
+                    'employee' => $leave->employee->name ?? 'Unknown',
                     'until' => $leave->end_date->format('d.m.Y'),
                 ];
             });
@@ -78,7 +78,7 @@ class KioskController extends Controller
                 $destination = $delegation->delegationPlace ? $delegation->delegationPlace->name : ($delegation->address ?? $delegation->name);
                 return [
                     'id' => $delegation->id,
-                    'user' => $delegation->employee->name ?? 'Unknown',
+                    'employee' => $delegation->employee->name ?? 'Unknown',
                     'destination' => $destination,
                     'vehicle' => $delegation->vehicle ? $delegation->vehicle->license_plate : '-',
                 ];
@@ -159,7 +159,7 @@ class KioskController extends Controller
                     return response()->json([
                         'message' => 'Delegation spans multiple days.',
                         'type' => 'delegation_end_schedule_required',
-                        'user' => [
+                        'employee' => [
                             'name' => $employee->name,
                             'id' => $employee->id,
                         ],
@@ -181,7 +181,7 @@ class KioskController extends Controller
                 return response()->json([
                     'message' => 'Delegation ended successfully.',
                     'type' => 'delegation_end',
-                    'user' => [
+                    'employee' => [
                         'name' => $employee->name,
                     ],
                     'time' => $event->event_time->format('g:i A'),
@@ -191,7 +191,7 @@ class KioskController extends Controller
 
             return response()->json([
                 'message' => 'User verified.',
-                'user' => [
+                'employee' => [
                     'id' => $employee->id,
                     'name' => $employee->name,
                     'email' => $employee->email,
@@ -246,7 +246,7 @@ class KioskController extends Controller
             return response()->json([
                 'message' => $message,
                 'type' => $type,
-                'user' => [
+                'employee' => [
                     'name' => $employee->name,
                 ],
                 'time' => $event->event_time->format('g:i A'),
