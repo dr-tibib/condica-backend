@@ -23,7 +23,7 @@ const formatDate = (date: Date) => {
 const ConcediuWizard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = location.state?.user;
+  const employee = location.state?.employee;
   const code = location.state?.code;
 
   // Initialize dates
@@ -46,10 +46,10 @@ const ConcediuWizard = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) navigate('/');
-  }, [user, navigate]);
+    if (!employee) navigate('/');
+  }, [employee, navigate]);
 
-  if (!user) return null;
+  if (!employee) return null;
 
   // Calculate total days
   // Reset hours to compare dates only
@@ -70,7 +70,7 @@ const ConcediuWizard = () => {
     setIsLoading(true);
     try {
         await axios.post('/api/kiosk/leave-request', {
-            user_id: user.id,
+            employee_id: employee.id,
             code,
             start_date: formatDate(startDate),
             end_date: formatDate(endDate)

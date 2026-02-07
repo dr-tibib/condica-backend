@@ -4,18 +4,18 @@ import axios from 'axios';
 interface DashboardData {
     latest_logins: {
         id: number;
-        user: string;
+        employee: string;
         time: string;
         type: string;
     }[];
     on_leave: {
         id: number;
-        user: string;
+        employee: string;
         until: string;
     }[];
     active_delegations: {
         id: number;
-        user: string;
+        employee: string;
         destination: string;
         vehicle: string;
     }[];
@@ -82,7 +82,7 @@ const Dashboard = ({ refreshTrigger = 0, refreshInterval = 10000 }: DashboardPro
                             <span className={`material-symbols-outlined ${color} font-bold`}>
                                 {icon}
                             </span>
-                            <span className="font-semibold">{login.user}</span>
+                            <span className="font-semibold">{login.employee}</span>
                         </td>
                         <td className={`py-3 px-4 text-right font-mono font-bold ${color}`}>{login.time}</td>
                         </tr>
@@ -105,7 +105,7 @@ const Dashboard = ({ refreshTrigger = 0, refreshInterval = 10000 }: DashboardPro
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                     {data.on_leave.map((leave) => (
                         <tr key={leave.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                            <td className="py-3 px-4 font-semibold">{leave.user}</td>
+                            <td className="py-3 px-4 font-semibold">{leave.employee}</td>
                             <td className="py-3 px-4 text-right font-mono text-slate-600 dark:text-slate-400 font-bold">{leave.until}</td>
                         </tr>
                     ))}
@@ -128,7 +128,7 @@ const Dashboard = ({ refreshTrigger = 0, refreshInterval = 10000 }: DashboardPro
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                     {data.active_delegations.map((delegation) => (
                          <tr key={delegation.id} className="grid grid-cols-12 items-center hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                            <td className="col-span-6 py-3 px-4 font-semibold">{delegation.user}</td>
+                            <td className="col-span-6 py-3 px-4 font-semibold">{delegation.employee}</td>
                             <td className="col-span-3 py-3 px-4 font-medium text-slate-600 dark:text-slate-400">{delegation.destination}</td>
                             <td className="col-span-3 py-3 px-4 font-mono font-bold text-primary dark:text-blue-400 uppercase text-right">{delegation.vehicle}</td>
                         </tr>

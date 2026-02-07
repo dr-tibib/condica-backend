@@ -10,7 +10,7 @@ interface ScheduleDay {
 }
 
 interface ScheduleState {
-    user: { id: number; name: string };
+    employee: { id: number; name: string };
     delegation_start_time: string;
     schedule_days: ScheduleDay[];
     shift_settings: { start: string; end: string };
@@ -55,7 +55,7 @@ const DelegationSchedule = () => {
       setError(null);
       try {
           await axios.post('/api/kiosk/end-delegation-schedule', {
-              user_id: state.user.id,
+              employee_id: state.employee.id,
               code: state.code,
               schedule: schedule
           });
@@ -81,7 +81,7 @@ const DelegationSchedule = () => {
             </button>
           <div className="flex flex-col">
               <h1 className="text-2xl font-bold leading-none">Confirmare Program Delegație</h1>
-              <span className="text-slate-500 dark:text-slate-400 text-sm">{state.user?.name}</span>
+              <span className="text-slate-500 dark:text-slate-400 text-sm">{state.employee?.name}</span>
           </div>
         </div>
         <Clock />

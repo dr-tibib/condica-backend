@@ -23,28 +23,28 @@ const DelegationWizard = () => {
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Retrieve user from navigation state
-  const user = location.state?.user;
+  // Retrieve employee from navigation state
+  const employee = location.state?.employee;
 
   useEffect(() => {
-    if (!user) {
+    if (!employee) {
         navigate('/');
     }
-  }, [user, navigate]);
+  }, [employee, navigate]);
 
-  if (!user) return null;
+  if (!employee) return null;
 
   const handleStart = async () => {
     setIsLoading(true);
     try {
       const workplaceId = getKioskWorkplaceId();
-      const userId = user.id;
+      const employeeId = employee.id;
 
       // Start Delegation for each place
       // (Execute sequentially to avoid race conditions on check-in if any)
       for (const place of selectedPlaces) {
          await axios.post('/api/delegations', {
-            user_id: userId,
+            employee_id: employeeId,
             workplace_id: workplaceId,
             place_id: place.google_place_id,
             name: place.name,
