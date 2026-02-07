@@ -2,7 +2,7 @@
 <x-backpack::menu-item title="Team Command Center" icon="la la-tachometer" :link="backpack_url('team-command-center')" />
 
 <x-backpack::menu-dropdown title="Organization" icon="la la-sitemap">
-    <x-backpack::menu-dropdown-item title="Employees" icon="la la-user" :link="backpack_url('user')" />
+    <x-backpack::menu-dropdown-item title="Employees" icon="la la-user" :link="backpack_url('employee')" />
     <x-backpack::menu-dropdown-item title="Departments" icon="la la-building-o" :link="backpack_url('department')" />
     <x-backpack::menu-dropdown-item title="Workplaces" icon="la la-building" :link="backpack_url('workplace')" />
 </x-backpack::menu-dropdown>
@@ -28,6 +28,7 @@
 </x-backpack::menu-dropdown>
 
 <x-backpack::menu-dropdown title="Authentication" icon="la la-lock">
+    <x-backpack::menu-dropdown-item title="Users" icon="la la-user" :link="backpack_url('user')" />
     <x-backpack::menu-dropdown-item title="Roles" icon="la la-group" :link="backpack_url('role')" />
     <x-backpack::menu-dropdown-item title="Permissions" icon="la la-key" :link="backpack_url('permission')" />
 </x-backpack::menu-dropdown>
