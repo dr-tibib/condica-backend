@@ -37,14 +37,14 @@ const Home = () => {
         workplace_id: workplaceId,
       });
       
-      if (selectedFlow === 'delegation' && response.data.user && !response.data.type) {
-        // Navigate to delegation wizard with user info
-        navigate('/delegation', { state: { user: response.data.user } });
+      if (selectedFlow === 'delegation' && response.data.employee && !response.data.type) {
+        // Navigate to delegation wizard with employee info
+        navigate('/delegation', { state: { employee: response.data.employee } });
         return;
       }
 
-      if (selectedFlow === 'concediu' && response.data.user) {
-        navigate('/concediu', { state: { user: response.data.user, code } });
+      if (selectedFlow === 'concediu' && response.data.employee) {
+        navigate('/concediu', { state: { employee: response.data.employee, code } });
         return;
       }
 
