@@ -17,7 +17,7 @@ class PresenceEventFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => \App\Models\User::factory(),
+            'employee_id' => \App\Models\Employee::factory(),
             'workplace_id' => \App\Models\Workplace::factory(),
             'event_type' => fake()->randomElement(['check_in', 'check_out']),
             'event_time' => now(),

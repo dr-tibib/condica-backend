@@ -29,6 +29,7 @@ class EmployeeDashboardTest extends TenantTestCase
     {
         // 1. Create User
         $user = User::factory()->create();
+        $employee = \App\Models\Employee::factory()->create(['user_id' => $user->id]);
 
         // 2. Setup Data
         // Assume today is Wednesday 15th (middle of month)
@@ -37,12 +38,12 @@ class EmployeeDashboardTest extends TenantTestCase
         // Check in/out for previous days
         // Day 1: 8h
         $checkIn = PresenceEvent::factory()->create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'event_type' => 'check_in',
             'event_time' => Carbon::parse('2023-11-01 09:00:00'),
         ]);
         PresenceEvent::factory()->create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'event_type' => 'check_out',
             'event_time' => Carbon::parse('2023-11-01 17:00:00'),
             'pair_event_id' => $checkIn->id,
@@ -51,7 +52,7 @@ class EmployeeDashboardTest extends TenantTestCase
         // - Missing Clock Out (Alert)
         // Yesterday check-in without check-out
         PresenceEvent::factory()->create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'event_type' => 'check_in',
             'event_time' => Carbon::parse('2023-11-14 09:00:00'),
         ]);
@@ -59,7 +60,7 @@ class EmployeeDashboardTest extends TenantTestCase
         // - Rejected Leave (Alert)
         $leaveType = LeaveType::first();
         LeaveRequest::create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'leave_type_id' => $leaveType->id,
             'start_date' => Carbon::parse('2023-11-10'),
             'end_date' => Carbon::parse('2023-11-11'),
@@ -70,7 +71,7 @@ class EmployeeDashboardTest extends TenantTestCase
 
         // - Upcoming Leave
         LeaveRequest::create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'leave_type_id' => $leaveType->id,
             'start_date' => Carbon::parse('2023-11-20'),
             'end_date' => Carbon::parse('2023-11-21'),

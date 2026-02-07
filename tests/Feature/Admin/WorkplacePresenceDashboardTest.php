@@ -17,10 +17,7 @@ class WorkplacePresenceDashboardTest extends TenantTestCase
 
         // 1. Create User/Admin
         $admin = User::factory()->create(['email' => 'admin@example.com']);
-        // Assign necessary permissions/roles if Backpack checks them?
-        // Usually Backpack checks if user can access backend.
-        // Assuming default User factory or setup allows access or I need to mock it.
-        // Backpack usually uses `backpack_user()` helper.
+        \App\Models\Employee::factory()->create(['user_id' => $admin->id]);
 
         // 2. Create Workplace
         $workplace = Workplace::factory()->create();
@@ -28,8 +25,10 @@ class WorkplacePresenceDashboardTest extends TenantTestCase
         // 3. Create Presence Events (Today)
         // User 1: Checked In 1 hour ago
         $user1 = User::factory()->create(['name' => 'User One']);
+        $emp1 = \App\Models\Employee::factory()->create(['user_id' => $user1->id, 'first_name' => 'User One']);
+
         PresenceEvent::factory()->create([
-            'user_id' => $user1->id,
+            'employee_id' => $emp1->id,
             'workplace_id' => $workplace->id,
             'event_type' => 'check_in',
             'event_time' => now()->subHour(),
@@ -37,14 +36,16 @@ class WorkplacePresenceDashboardTest extends TenantTestCase
 
         // User 2: Checked In 2 hours ago, Checked Out 1 hour ago
         $user2 = User::factory()->create(['name' => 'User Two']);
+        $emp2 = \App\Models\Employee::factory()->create(['user_id' => $user2->id, 'first_name' => 'User Two']);
+
         $in = PresenceEvent::factory()->create([
-            'user_id' => $user2->id,
+            'employee_id' => $emp2->id,
             'workplace_id' => $workplace->id,
             'event_type' => 'check_in',
             'event_time' => now()->subHours(2),
         ]);
         PresenceEvent::factory()->create([
-            'user_id' => $user2->id,
+            'employee_id' => $emp2->id,
             'workplace_id' => $workplace->id,
             'event_type' => 'check_out',
             'event_time' => now()->subHour(),
@@ -78,20 +79,24 @@ class WorkplacePresenceDashboardTest extends TenantTestCase
         config(['backpack.base.guard' => 'web']);
 
         $admin = User::factory()->create(['email' => 'admin@example.com']);
+        \App\Models\Employee::factory()->create(['user_id' => $admin->id]);
+
         $workplace = Workplace::factory()->create();
 
         // User 3: Worked Yesterday
         $user3 = User::factory()->create(['name' => 'User Three']);
+        $emp3 = \App\Models\Employee::factory()->create(['user_id' => $user3->id, 'first_name' => 'User Three']);
+
         $yesterday = now()->subDay();
 
         $in = PresenceEvent::factory()->create([
-            'user_id' => $user3->id,
+            'employee_id' => $emp3->id,
             'workplace_id' => $workplace->id,
             'event_type' => 'check_in',
             'event_time' => $yesterday->copy()->setHour(9),
         ]);
         PresenceEvent::factory()->create([
-            'user_id' => $user3->id,
+            'employee_id' => $emp3->id,
             'workplace_id' => $workplace->id,
             'event_type' => 'check_out',
             'event_time' => $yesterday->copy()->setHour(17),

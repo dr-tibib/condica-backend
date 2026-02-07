@@ -23,17 +23,22 @@ class TeamCommandCenterTest extends TenantTestCase
 
     public function test_team_command_center_loads_with_correct_stats_and_roster()
     {
-        // 1. Create Users
+        // 1. Create Users & Employees
         $admin = User::factory()->create();
+        $adminEmployee = \App\Models\Employee::factory()->create(['user_id' => $admin->id]);
+
         $employee1 = User::factory()->create(['name' => 'Alice']);
+        $emp1 = \App\Models\Employee::factory()->create(['user_id' => $employee1->id, 'first_name' => 'Alice']);
+
         $employee2 = User::factory()->create(['name' => 'Bob']);
+        $emp2 = \App\Models\Employee::factory()->create(['user_id' => $employee2->id, 'first_name' => 'Bob']);
 
         // 2. Setup Data
         Carbon::setTestNow(Carbon::parse('2023-10-27 10:00:00')); // Friday 10 AM
 
         // Employee 1: On Shift (Check In today)
         PresenceEvent::factory()->create([
-            'user_id' => $employee1->id,
+            'employee_id' => $emp1->id,
             'event_type' => 'check_in',
             'event_time' => Carbon::parse('2023-10-27 09:00:00'),
         ]);
@@ -43,7 +48,7 @@ class TeamCommandCenterTest extends TenantTestCase
         // Upcoming Leave for Admin
         $leaveType = LeaveType::first();
         LeaveRequest::create([
-            'user_id' => $admin->id,
+            'employee_id' => $adminEmployee->id,
             'leave_type_id' => $leaveType->id,
             'start_date' => Carbon::parse('2023-10-30'), // Next Monday
             'end_date' => Carbon::parse('2023-10-31'),
@@ -53,7 +58,7 @@ class TeamCommandCenterTest extends TenantTestCase
 
         // Pending Leave Request (Action Center)
         LeaveRequest::create([
-            'user_id' => $employee2->id,
+            'employee_id' => $emp2->id,
             'leave_type_id' => $leaveType->id,
             'start_date' => Carbon::parse('2023-11-01'),
             'end_date' => Carbon::parse('2023-11-02'),
