@@ -60,7 +60,7 @@ class LeaveRequestObserver
         $year = $leaveRequest->start_date->year;
 
         $balance = LeaveBalance::firstOrCreate(
-            ['user_id' => $leaveRequest->user_id, 'year' => $year],
+            ['employee_id' => $leaveRequest->employee_id, 'year' => $year],
             ['total_entitlement' => 21] // Default entitlement if not exists
         );
 
