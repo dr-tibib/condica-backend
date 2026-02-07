@@ -19,8 +19,15 @@ class UserCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation { update as traitUpdate; }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\InlineCreateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\FetchOperation;
 
     private bool $isCentralTenant = false;
+
+    protected function fetchUser()
+    {
+        return $this->fetch(config('backpack.permissionmanager.models.user'));
+    }
 
     public function setup(): void
     {
