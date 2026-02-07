@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Clock from '../components/Clock';
 import FlowSelector from '../components/FlowSelector';
 import CodeInput from '../components/CodeInput';
@@ -9,12 +9,21 @@ import { getKioskWorkplaceId } from '../../utils/kiosk';
 
 const Home = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [code, setCode] = useState('');
   const [selectedFlow, setSelectedFlow] = useState('regular');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [lastActionTime, setLastActionTime] = useState(Date.now());
+
+  useEffect(() => {
+    if (location.state?.success) {
+      setSuccess(location.state.success);
+      navigate(location.pathname, { replace: true, state: {} });
+      setTimeout(() => setSuccess(null), 3000);
+    }
+  }, [location.state, navigate, location.pathname]);
 
   const handleSubmit = async () => {
     setIsLoading(true);
