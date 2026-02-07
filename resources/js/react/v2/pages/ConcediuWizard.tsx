@@ -43,6 +43,7 @@ const ConcediuWizard = () => {
   }, []); // Run once on mount (after state init)
 
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) navigate('/');
@@ -60,8 +61,10 @@ const ConcediuWizard = () => {
   const totalDays = diffDays > 0 ? diffDays : 0;
 
   const handleSubmit = async () => {
+    setError(null);
     if (totalDays <= 0) {
-        alert("Data de sfârșit trebuie să fie după data de început.");
+        setError("Data de sfârșit trebuie să fie după data de început.");
+        setTimeout(() => setError(null), 3000);
         return;
     }
     setIsLoading(true);
@@ -72,12 +75,11 @@ const ConcediuWizard = () => {
             start_date: formatDate(startDate),
             end_date: formatDate(endDate)
         });
-        // Success feedback handled by alert for now as per plan,
-        // ideally could show a success modal or toast.
-        alert('Concediu înregistrat cu succes!');
-        navigate('/');
+
+        navigate('/', { state: { success: 'Concediu înregistrat cu succes!' } });
     } catch (error: any) {
-        alert(error.response?.data?.message || 'Eroare la înregistrare.');
+        setError(error.response?.data?.message || 'Eroare la înregistrare.');
+        setTimeout(() => setError(null), 3000);
     } finally {
         setIsLoading(false);
     }
@@ -172,6 +174,12 @@ const ConcediuWizard = () => {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto px-8 py-6">
+                {error && (
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded shadow-sm" role="alert">
+                        <p className="font-bold">Eroare</p>
+                        <p>{error}</p>
+                    </div>
+                )}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                     <div className="flex flex-col gap-4">
                         <h2 className="text-xl font-bold text-gray-500 dark:text-gray-400 px-2 flex items-center gap-2">

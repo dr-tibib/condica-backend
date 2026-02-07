@@ -60,8 +60,7 @@ const DelegationSchedule = () => {
               schedule: schedule
           });
 
-          alert('Delegația a fost încheiată cu succes!');
-          navigate('/');
+          navigate('/', { state: { success: 'Delegația a fost încheiată cu succes!' } });
       } catch (err: any) {
           setError(err.response?.data?.message || 'A apărut o eroare la salvarea programului.');
       } finally {
