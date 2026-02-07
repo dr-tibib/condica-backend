@@ -3,8 +3,8 @@
 namespace Tests\Feature\API;
 
 use App\Models\Delegation;
+use App\Models\Employee;
 use App\Models\PresenceEvent;
-use App\Models\User;
 use App\Models\Workplace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -14,32 +14,33 @@ class KioskDelegationTest extends TenantTestCase
 {
     use RefreshDatabase;
 
-    protected User $user;
+    protected Employee $employee;
     protected Workplace $workplace;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user = User::factory()->create([
-            'workplace_enter_code' => '123',
-        ]);
-
         $this->workplace = Workplace::create([
             'name' => 'HQ',
             'is_active' => true,
+        ]);
+
+        $this->employee = Employee::factory()->create([
+            'workplace_enter_code' => '123',
+            'workplace_id' => $this->workplace->id,
         ]);
     }
 
     public function test_delegation_start_creates_checkin_if_not_present()
     {
-        $this->assertFalse($this->user->isCurrentlyPresent());
+        $this->assertFalse($this->employee->isCurrentlyPresent());
 
         $domain = $this->tenant->domains->first()->domain;
         $url = "http://{$domain}/api/delegations";
 
         $response = $this->postJson($url, [
-            'user_id' => $this->user->id,
+            'employee_id' => $this->employee->id,
             'name' => 'Client Site',
             'place_id' => 'place_123',
             'workplace_id' => $this->workplace->id, // Passing workplace_id from kiosk
@@ -48,7 +49,7 @@ class KioskDelegationTest extends TenantTestCase
         $response->assertStatus(200);
 
         // Verify Check-in created
-        $checkIn = PresenceEvent::where('user_id', $this->user->id)
+        $checkIn = PresenceEvent::where('employee_id', $this->employee->id)
             ->where('event_type', 'check_in')
             ->first();
 
@@ -56,7 +57,7 @@ class KioskDelegationTest extends TenantTestCase
         $this->assertEquals($this->workplace->id, $checkIn->workplace_id);
 
         // Verify Delegation Start created
-        $delegationStart = PresenceEvent::where('user_id', $this->user->id)
+        $delegationStart = PresenceEvent::where('employee_id', $this->employee->id)
             ->where('event_type', 'delegation_start')
             ->first();
 
@@ -71,14 +72,14 @@ class KioskDelegationTest extends TenantTestCase
     {
         // Manually check in
         PresenceEvent::create([
-            'user_id' => $this->user->id,
+            'employee_id' => $this->employee->id,
             'workplace_id' => $this->workplace->id,
             'event_type' => 'check_in',
             'event_time' => now()->subHour(),
             'method' => 'kiosk',
         ]);
 
-        $this->assertTrue($this->user->refresh()->isCurrentlyPresent());
+        $this->assertTrue($this->employee->refresh()->isCurrentlyPresent());
 
         $initialEventsCount = PresenceEvent::count();
 
@@ -86,7 +87,7 @@ class KioskDelegationTest extends TenantTestCase
         $url = "http://{$domain}/api/delegations";
 
         $response = $this->postJson($url, [
-            'user_id' => $this->user->id,
+            'employee_id' => $this->employee->id,
             'name' => 'Client Site',
             'place_id' => 'place_123',
             // workplace_id might be sent but should be ignored or consistent
@@ -107,7 +108,7 @@ class KioskDelegationTest extends TenantTestCase
         // Start Delegation (which implies check-in)
         // 1. Check in
         $checkIn = PresenceEvent::create([
-            'user_id' => $this->user->id,
+            'employee_id' => $this->employee->id,
             'workplace_id' => $this->workplace->id,
             'event_type' => 'check_in',
             'event_time' => now()->subHours(2),
@@ -116,7 +117,7 @@ class KioskDelegationTest extends TenantTestCase
 
         // 2. Start Delegation
         $delegationStart = PresenceEvent::create([
-            'user_id' => $this->user->id,
+            'employee_id' => $this->employee->id,
             'workplace_id' => $this->workplace->id,
             'event_type' => 'delegation_start',
             'event_time' => now()->subHour(),
@@ -126,7 +127,7 @@ class KioskDelegationTest extends TenantTestCase
 
         // Also create Delegation record as Controller does
         Delegation::create([
-             'user_id' => $this->user->id,
+             'employee_id' => $this->employee->id,
              'name' => 'Somewhere',
              'start_event_id' => $delegationStart->id,
         ]);
@@ -144,7 +145,7 @@ class KioskDelegationTest extends TenantTestCase
         $response->assertJson(['type' => 'delegation_end']);
 
         // Verify delegation_end event created
-        $delegationEnd = PresenceEvent::where('user_id', $this->user->id)
+        $delegationEnd = PresenceEvent::where('employee_id', $this->employee->id)
             ->where('event_type', 'delegation_end')
             ->latest('id')
             ->first();
@@ -157,7 +158,7 @@ class KioskDelegationTest extends TenantTestCase
         $this->assertEquals($delegationEnd->id, $delegationStart->pair_event_id);
 
         // Verify NO check_out event (user still present)
-        $checkOut = PresenceEvent::where('user_id', $this->user->id)
+        $checkOut = PresenceEvent::where('employee_id', $this->employee->id)
             ->where('event_type', 'check_out')
             ->first();
 

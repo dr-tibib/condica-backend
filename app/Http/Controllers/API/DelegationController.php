@@ -133,7 +133,7 @@ class DelegationController extends Controller
                 return response()->json([
                     'message' => 'Delegation started successfully.',
                     'type' => 'delegation-start',
-                    'user' => ['name' => $employee->name],
+                    'employee' => ['name' => $employee->name],
                     'time' => $event->event_time->format('g:i A'),
                     'event' => $event,
                     'delegation' => $delegation,
