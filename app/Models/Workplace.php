@@ -133,7 +133,7 @@ class Workplace extends Model
      */
     public function currentlyPresentUsers(): Collection
     {
-        return User::whereHas('latestPresenceEvent', function ($query) {
+        return Employee::whereHas('latestPresenceEvent', function ($query) {
             $query->where('workplace_id', $this->id)
                 ->where('event_type', 'check_in');
         })->get();
