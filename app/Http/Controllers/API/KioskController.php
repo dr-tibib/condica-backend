@@ -7,10 +7,10 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Delegation;
 use App\Models\DelegationPlace;
+use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\PresenceEvent;
-use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\PresenceService;
 use Illuminate\Http\JsonResponse;
@@ -40,7 +40,7 @@ class KioskController extends Controller
     public function getDashboardData(): JsonResponse
     {
         // 1. Latest Logins
-        $latestLogins = PresenceEvent::with('user')
+        $latestLogins = PresenceEvent::with('employee')
             ->whereIn('event_type', ['check_in', 'check_out', 'delegation_start', 'delegation_end'])
             ->orderBy('event_time', 'desc')
             ->take(20)
@@ -48,14 +48,14 @@ class KioskController extends Controller
             ->map(function ($event) {
                 return [
                     'id' => $event->id,
-                    'user' => $event->user->name,
+                    'user' => $event->employee->name ?? 'Unknown',
                     'time' => $event->event_time->format('H:i'),
                     'type' => $event->event_type,
                 ];
             });
 
         // 2. On Leave
-        $onLeave = LeaveRequest::with('user')
+        $onLeave = LeaveRequest::with('employee')
             ->where('status', 'APPROVED')
             ->whereDate('start_date', '<=', now())
             ->whereDate('end_date', '>=', now())
@@ -63,13 +63,13 @@ class KioskController extends Controller
             ->map(function ($leave) {
                 return [
                     'id' => $leave->id,
-                    'user' => $leave->user->name,
+                    'user' => $leave->employee->name ?? 'Unknown',
                     'until' => $leave->end_date->format('d.m.Y'),
                 ];
             });
 
         // 3. Active Delegations
-        $activeDelegations = Delegation::with(['user', 'vehicle', 'delegationPlace'])
+        $activeDelegations = Delegation::with(['employee', 'vehicle', 'delegationPlace'])
             ->whereHas('startEvent', function ($query) {
                 $query->whereNull('pair_event_id');
             })
@@ -78,7 +78,7 @@ class KioskController extends Controller
                 $destination = $delegation->delegationPlace ? $delegation->delegationPlace->name : ($delegation->address ?? $delegation->name);
                 return [
                     'id' => $delegation->id,
-                    'user' => $delegation->user->name,
+                    'user' => $delegation->employee->name ?? 'Unknown',
                     'destination' => $destination,
                     'vehicle' => $delegation->vehicle ? $delegation->vehicle->license_plate : '-',
                 ];
@@ -110,16 +110,16 @@ class KioskController extends Controller
         $code = $validated['code'];
         $flow = $validated['flow'] ?? 'regular';
 
-        $user = User::where('workplace_enter_code', $code)->first();
+        $employee = Employee::where('workplace_enter_code', $code)->first();
 
-        if (! $user) {
+        if (! $employee) {
             return response()->json([
                 'message' => 'Invalid code.',
             ], 404);
         }
 
         if ($flow === 'delegation' || $flow === 'concediu') {
-            $latestEvent = $user->latestPresenceEvent;
+            $latestEvent = $employee->latestPresenceEvent;
             $isDelegated = $latestEvent && $latestEvent->isDelegationStart();
 
             if ($flow === 'delegation' && $isDelegated) {
@@ -160,8 +160,8 @@ class KioskController extends Controller
                         'message' => 'Delegation spans multiple days.',
                         'type' => 'delegation_end_schedule_required',
                         'user' => [
-                            'name' => $user->name,
-                            'id' => $user->id,
+                            'name' => $employee->name,
+                            'id' => $employee->id,
                         ],
                         'delegation_start_time' => $start->format('Y-m-d H:i:s'),
                         'schedule_days' => $dates,
@@ -173,7 +173,7 @@ class KioskController extends Controller
                 }
 
                 // End delegation normal flow
-                $event = $this->presenceService->delegationEndOnly($user, [
+                $event = $this->presenceService->delegationEndOnly($employee, [
                     'method' => 'kiosk',
                     'device_info' => $validated['device_info'] ?? null,
                 ]);
@@ -182,7 +182,7 @@ class KioskController extends Controller
                     'message' => 'Delegation ended successfully.',
                     'type' => 'delegation_end',
                     'user' => [
-                        'name' => $user->name,
+                        'name' => $employee->name,
                     ],
                     'time' => $event->event_time->format('g:i A'),
                     'event' => $event,
@@ -192,10 +192,10 @@ class KioskController extends Controller
             return response()->json([
                 'message' => 'User verified.',
                 'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'default_workplace_id' => $user->default_workplace_id,
+                    'id' => $employee->id,
+                    'name' => $employee->name,
+                    'email' => $employee->email,
+                    'default_workplace_id' => $employee->workplace_id,
                 ],
                 'is_delegated' => $isDelegated,
                 'current_delegation' => $isDelegated ? $latestEvent : null,
@@ -204,12 +204,12 @@ class KioskController extends Controller
 
         // Regular flow: Check In / Check Out
         try {
-            if ($user->isCurrentlyPresent()) {
-                $latestEvent = $user->latestPresenceEvent;
+            if ($employee->isCurrentlyPresent()) {
+                $latestEvent = $employee->latestPresenceEvent;
 
                 if ($latestEvent && $latestEvent->isDelegationStart()) {
                     // Only end the delegation, do not check out completely
-                    $event = $this->presenceService->delegationEndOnly($user, [
+                    $event = $this->presenceService->delegationEndOnly($employee, [
                         'method' => 'kiosk',
                         'device_info' => $validated['device_info'] ?? null,
                     ]);
@@ -217,7 +217,7 @@ class KioskController extends Controller
                     $type = 'delegation_end';
                 } else {
                     // Check Out
-                    $event = $this->presenceService->checkOut($user, [
+                    $event = $this->presenceService->checkOut($employee, [
                         'method' => 'kiosk',
                         'device_info' => $validated['device_info'] ?? null,
                     ]);
@@ -226,11 +226,7 @@ class KioskController extends Controller
                 }
             } else {
                 // Check In
-                // For regular flow, we need a workplace ID.
-                // Assuming the kiosk is associated with a workplace, passed in request or config.
-                // If not provided in request, check user's default workplace or fail.
-
-                $workplaceId = $validated['workplace_id'] ?? $user->default_workplace_id;
+                $workplaceId = $validated['workplace_id'] ?? $employee->workplace_id;
 
                 if (! $workplaceId) {
                      return response()->json([
@@ -238,7 +234,7 @@ class KioskController extends Controller
                     ], 400);
                 }
 
-                $event = $this->presenceService->checkIn($user, [
+                $event = $this->presenceService->checkIn($employee, [
                     'workplace_id' => $workplaceId,
                     'method' => 'kiosk',
                     'device_info' => $validated['device_info'] ?? null,
@@ -251,7 +247,7 @@ class KioskController extends Controller
                 'message' => $message,
                 'type' => $type,
                 'user' => [
-                    'name' => $user->name,
+                    'name' => $employee->name,
                 ],
                 'time' => $event->event_time->format('g:i A'),
                 'event' => $event,
@@ -272,15 +268,15 @@ class KioskController extends Controller
         $codeLength = (int) ($tenantData['code_length'] ?? 3);
 
         $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
+            'employee_id' => ['required', 'exists:employees,id'],
             'code' => ['required', 'string', "digits:{$codeLength}"],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
         ]);
 
-        $user = User::find($validated['user_id']);
+        $employee = Employee::find($validated['employee_id']);
 
-        if ($user->workplace_enter_code !== $validated['code']) {
+        if ($employee->workplace_enter_code !== $validated['code']) {
             return response()->json(['message' => 'Invalid code.'], 403);
         }
 
@@ -298,7 +294,7 @@ class KioskController extends Controller
         $diff = $start->diffInDays($end) + 1;
 
         $leaveRequest = LeaveRequest::create([
-            'user_id' => $validated['user_id'],
+            'employee_id' => $validated['employee_id'],
             'leave_type_id' => $leaveType->id,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
@@ -319,7 +315,7 @@ class KioskController extends Controller
         $codeLength = (int) ($tenantData['code_length'] ?? 3);
 
         $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
+            'employee_id' => ['required', 'exists:employees,id'],
             'schedule' => ['required', 'array'],
             'schedule.*.date' => ['required', 'date_format:Y-m-d'],
             'schedule.*.start_time' => ['required', 'date_format:H:i'],
@@ -327,16 +323,16 @@ class KioskController extends Controller
             'code' => ['required', 'string', "digits:{$codeLength}"],
         ]);
 
-        $user = User::findOrFail($validated['user_id']);
+        $employee = Employee::findOrFail($validated['employee_id']);
 
-        if ($user->workplace_enter_code !== $validated['code']) {
+        if ($employee->workplace_enter_code !== $validated['code']) {
             return response()->json([
                 'message' => 'Invalid code.',
             ], 403);
         }
 
         try {
-            $this->presenceService->endDelegationWithSchedule($user, $validated['schedule']);
+            $this->presenceService->endDelegationWithSchedule($employee, $validated['schedule']);
 
             return response()->json([
                 'message' => 'Delegation ended successfully.',

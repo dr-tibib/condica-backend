@@ -15,7 +15,7 @@ class Delegation extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
+        'employee_id',
         'place_id',
         'name',
         'address',
@@ -32,9 +32,9 @@ class Delegation extends Model
         'longitude' => 'decimal:8',
     ];
 
-    public function user(): BelongsTo
+    public function employee(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Employee::class);
     }
 
     public function startEvent(): BelongsTo

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('presence_events', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('employee_id')->constrained()->onDelete('cascade');
             $table->foreignId('workplace_id')->constrained()->onDelete('cascade');
             $table->enum('event_type', ['check_in', 'check_out']);
             $table->timestamp('event_time');
@@ -37,9 +37,9 @@ return new class extends Migration
             // Indexes for performance
             $table->index('event_type');
             $table->index('event_time');
-            $table->index(['user_id', 'event_time']);
+            $table->index(['employee_id', 'event_time']);
             $table->index(['workplace_id', 'event_time']);
-            $table->index(['user_id', 'event_type', 'event_time']);
+            $table->index(['employee_id', 'event_type', 'event_time']);
         });
     }
 

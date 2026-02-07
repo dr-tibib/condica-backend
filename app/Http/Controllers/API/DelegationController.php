@@ -7,8 +7,8 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Delegation;
 use App\Models\DelegationPlace;
+use App\Models\Employee;
 use App\Models\PresenceEvent;
-use App\Models\User;
 use App\Services\PresenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,17 +22,17 @@ class DelegationController extends Controller
     ) {}
 
     /**
-     * Get recent unique delegation locations for the user (or all distinct).
+     * Get recent unique delegation locations for the employee.
      */
     public function index(Request $request): JsonResponse
     {
-        $userId = $request->query('user_id');
+        $employeeId = $request->query('employee_id');
 
         $query = Delegation::select('place_id', 'name', 'address', 'latitude', 'longitude')
             ->whereNotNull('place_id');
 
-        if ($userId) {
-            $query->where('user_id', $userId);
+        if ($employeeId) {
+            $query->where('employee_id', $employeeId);
         }
 
         $delegations = $query->latest('created_at')
@@ -53,7 +53,7 @@ class DelegationController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
+            'employee_id' => ['required', 'exists:employees,id'],
             'place_id' => ['nullable', 'string'],
             'name' => ['required', 'string'],
             'address' => ['nullable', 'string'],
@@ -65,7 +65,7 @@ class DelegationController extends Controller
             'workplace_id' => ['nullable', 'exists:workplaces,id'],
         ]);
 
-        $user = User::findOrFail($validated['user_id']);
+        $employee = Employee::findOrFail($validated['employee_id']);
 
         // Find or create DelegationPlace if Google Place ID is present
         $delegationPlaceId = null;
@@ -89,15 +89,15 @@ class DelegationController extends Controller
         }
 
         try {
-            return DB::transaction(function () use ($user, $validated, $delegationPlaceId) {
+            return DB::transaction(function () use ($employee, $validated, $delegationPlaceId) {
                 // 0. Auto Check-in if not present
-                if (! $user->isCurrentlyPresent()) {
-                    $workplaceId = $validated['workplace_id'] ?? $user->default_workplace_id;
+                if (! $employee->isCurrentlyPresent()) {
+                    $workplaceId = $validated['workplace_id'] ?? $employee->workplace_id;
 
                     // We need a workplace to check in.
                     if ($workplaceId) {
                         PresenceEvent::create([
-                            'user_id' => $user->id,
+                            'employee_id' => $employee->id,
                             'workplace_id' => $workplaceId,
                             'event_type' => 'check_in',
                             'event_time' => now()->subSecond(),
@@ -108,7 +108,7 @@ class DelegationController extends Controller
                 }
 
                 // 1. Create Presence Event
-                $event = $this->presenceService->checkIn($user, [
+                $event = $this->presenceService->checkIn($employee, [
                     'event_type' => 'delegation_start',
                     'method' => 'kiosk',
                     'device_info' => $validated['device_info'] ?? null,
@@ -119,7 +119,7 @@ class DelegationController extends Controller
 
                 // 2. Create Delegation Record
                 $delegation = Delegation::create([
-                    'user_id' => $user->id,
+                    'employee_id' => $employee->id,
                     'place_id' => $validated['place_id'] ?? null,
                     'name' => $validated['name'],
                     'address' => $validated['address'] ?? null,
@@ -133,7 +133,7 @@ class DelegationController extends Controller
                 return response()->json([
                     'message' => 'Delegation started successfully.',
                     'type' => 'delegation-start',
-                    'user' => ['name' => $user->name],
+                    'user' => ['name' => $employee->name],
                     'time' => $event->event_time->format('g:i A'),
                     'event' => $event,
                     'delegation' => $delegation,

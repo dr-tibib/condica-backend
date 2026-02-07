@@ -12,7 +12,7 @@ class LeaveRequest extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
+        'employee_id',
         'approver_id',
         'leave_type_id',
         'start_date',
@@ -32,14 +32,14 @@ class LeaveRequest extends Model
         'total_days' => 'float',
     ];
 
-    public function user()
+    public function employee()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Employee::class);
     }
 
     public function approver()
     {
-        return $this->belongsTo(User::class, 'approver_id');
+        return $this->belongsTo(Employee::class, 'approver_id');
     }
 
     public function leaveType()

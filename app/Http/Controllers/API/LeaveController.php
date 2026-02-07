@@ -21,10 +21,14 @@ class LeaveController extends Controller
     public function balance(Request $request): JsonResponse
     {
         $year = $request->input('year', now()->year);
-        $user = $request->user();
+        $employee = $request->user()->employee;
+
+        if (!$employee) {
+             abort(404, 'Employee profile not found.');
+        }
 
         $balance = LeaveBalance::firstOrCreate(
-            ['user_id' => $user->id, 'year' => $year],
+            ['employee_id' => $employee->id, 'year' => $year],
             ['total_entitlement' => 21, 'carried_over' => 0, 'taken' => 0]
         );
 
@@ -44,12 +48,16 @@ class LeaveController extends Controller
             'attachment_path' => 'nullable|string',
         ]);
 
-        $user = $request->user();
+        $employee = $request->user()->employee;
+        if (!$employee) {
+             abort(404, 'Employee profile not found.');
+        }
+
         $start = Carbon::parse($data['start_date']);
         $end = Carbon::parse($data['end_date']);
 
         // Overlap prevention
-        $overlap = LeaveRequest::where('user_id', $user->id)
+        $overlap = LeaveRequest::where('employee_id', $employee->id)
             ->where(function ($query) use ($start, $end) {
                 $query->whereBetween('start_date', [$start, $end])
                     ->orWhereBetween('end_date', [$start, $end])
@@ -78,13 +86,13 @@ class LeaveController extends Controller
             $year = $start->year;
 
             $balance = LeaveBalance::firstOrCreate(
-                ['user_id' => $user->id, 'year' => $year],
+                ['employee_id' => $employee->id, 'year' => $year],
                 ['total_entitlement' => 21]
             );
 
             $available = ($balance->total_entitlement + $balance->carried_over) - $balance->taken;
 
-            $pendingDays = LeaveRequest::where('user_id', $user->id)
+            $pendingDays = LeaveRequest::where('employee_id', $employee->id)
                 ->where('status', 'PENDING')
                 ->whereHas('leaveType', function ($q) {
                     $q->where('affects_annual_quota', true);
@@ -98,7 +106,7 @@ class LeaveController extends Controller
         }
 
         $leaveRequest = LeaveRequest::create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'leave_type_id' => $type->id,
             'start_date' => $start,
             'end_date' => $end,
@@ -137,7 +145,7 @@ class LeaveController extends Controller
         if ($data['status'] === 'REJECTED') {
             $leaveRequest->rejection_reason = $data['reason'];
         }
-        $leaveRequest->approver_id = $request->user()->id;
+        $leaveRequest->approver_id = $request->user()->employee->id;
         $leaveRequest->save();
         // Balance update is handled by LeaveRequestObserver
 
@@ -164,7 +172,7 @@ class LeaveController extends Controller
                     });
             })
             ->whereIn('status', ['APPROVED', 'PENDING'])
-            ->with('user:id,name,email')
+            ->with('employee:id,first_name,last_name,email')
             ->get();
 
         return response()->json($requests);
@@ -199,13 +207,13 @@ class LeaveController extends Controller
                     });
             })
             ->where('status', 'APPROVED')
-            ->with(['user', 'leaveType'])
+            ->with(['employee', 'leaveType'])
             ->get();
 
         if ($format === 'csv') {
             $csv = "Employee Name,Leave Type,Start Date,End Date,Medical Code\n";
             foreach ($requests as $req) {
-                $csv .= "{$req->user->name},{$req->leaveType->name},{$req->start_date->toDateString()},{$req->end_date->toDateString()},{$req->medical_code}\n";
+                $csv .= "{$req->employee->name},{$req->leaveType->name},{$req->start_date->toDateString()},{$req->end_date->toDateString()},{$req->medical_code}\n";
             }
             return response($csv)
                 ->header('Content-Type', 'text/csv')

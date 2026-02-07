@@ -31,7 +31,7 @@ return new class extends Migration
         // Create delegations table
         Schema::create('delegations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('employee_id')->constrained()->onDelete('cascade');
             $table->string('place_id')->nullable()->comment('Google Place ID');
             $table->string('name');
             $table->string('address')->nullable();
@@ -43,7 +43,7 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->index('user_id');
+            $table->index('employee_id');
             $table->index('place_id');
         });
     }
