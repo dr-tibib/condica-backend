@@ -31,6 +31,12 @@ class EmployeeDashboardController extends AdminController
         /** @var User $user */
         $user = backpack_user();
 
+        if (! $user->employee) {
+            return view('admin.errors.no_employee_profile', $this->data);
+        }
+
+        $employee = $user->employee;
+
         // --------------------------
         // 1. Hero Metrics (Month)
         // --------------------------
@@ -39,7 +45,7 @@ class EmployeeDashboardController extends AdminController
         $now = Carbon::now();
 
         // Logged Hours
-        $monthEvents = $user->presenceEvents()
+        $monthEvents = $employee->presenceEvents()
             ->whereBetween('event_time', [$startOfMonth, $now])
             ->orderBy('event_time')
             ->get();
@@ -89,7 +95,7 @@ class EmployeeDashboardController extends AdminController
         // --------------------------
         // Get events from last 5 days
         $recentStart = Carbon::today()->subDays(4);
-        $recentEvents = $user->presenceEvents()
+        $recentEvents = $employee->presenceEvents()
             ->where('event_time', '>=', $recentStart)
             ->orderBy('event_time', 'desc')
             ->get()
@@ -144,7 +150,7 @@ class EmployeeDashboardController extends AdminController
             ->orderBy('date')
             ->first();
 
-        $this->data['next_leave'] = LeaveRequest::where('user_id', $user->id)
+        $this->data['next_leave'] = LeaveRequest::where('employee_id', $employee->id)
             ->where('status', 'APPROVED')
             ->where('start_date', '>=', Carbon::today())
             ->orderBy('start_date')
@@ -153,7 +159,7 @@ class EmployeeDashboardController extends AdminController
         // --------------------------
         // 4. Alerts
         // --------------------------
-        $this->data['alerts'] = $this->alertService->getAlerts($user);
+        $this->data['alerts'] = $this->alertService->getAlerts($employee);
 
         return view('admin.dashboard.employee', $this->data);
     }

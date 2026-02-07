@@ -2,17 +2,17 @@
 
 namespace App\Services\Dashboard\Alerts\Providers;
 
+use App\Models\Employee;
 use App\Models\LeaveRequest;
-use App\Models\User;
 use App\Services\Dashboard\Alerts\Alert;
 use App\Services\Dashboard\Alerts\AlertProvider;
 use Illuminate\Support\Collection;
 
 class RejectedLeaveProvider implements AlertProvider
 {
-    public function getAlerts(User $user): Collection
+    public function getAlerts(Employee $employee): Collection
     {
-        $rejected = LeaveRequest::where('user_id', $user->id)
+        $rejected = LeaveRequest::where('employee_id', $employee->id)
             ->where('status', 'REJECTED')
             ->where('updated_at', '>=', now()->startOfMonth())
             ->get();

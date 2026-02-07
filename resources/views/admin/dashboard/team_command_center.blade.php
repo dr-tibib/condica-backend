@@ -76,7 +76,7 @@
                         <small class="text-muted">{{ $request->created_at->diffForHumans() }}</small>
                     </div>
                     <div class="mb-2">
-                        <strong>{{ $request->user->name }}</strong> requested {{ $request->start_date->format('M jS') }} ({{ $request->leaveType->name }})
+                        <strong>{{ $request->employee->name }}</strong> requested {{ $request->start_date->format('M jS') }} ({{ $request->leaveType->name }})
                     </div>
                     <div>
                         <a href="{{ backpack_url('leave-request/'.$request->id.'/edit') }}" class="btn btn-sm btn-success">Review</a>

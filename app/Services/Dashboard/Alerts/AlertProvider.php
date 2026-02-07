@@ -2,7 +2,7 @@
 
 namespace App\Services\Dashboard\Alerts;
 
-use App\Models\User;
+use App\Models\Employee;
 use Illuminate\Support\Collection;
 
 interface AlertProvider
@@ -10,5 +10,5 @@ interface AlertProvider
     /**
      * @return Collection<int, Alert>
      */
-    public function getAlerts(User $user): Collection;
+    public function getAlerts(Employee $employee): Collection;
 }

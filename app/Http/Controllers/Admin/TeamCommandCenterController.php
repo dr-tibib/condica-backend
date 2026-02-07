@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\User;
 use App\Models\Workplace;
@@ -20,7 +21,7 @@ class TeamCommandCenterController extends CrudController
 
     public function setup()
     {
-        CRUD::setModel(\App\Models\User::class);
+        CRUD::setModel(\App\Models\Employee::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/team-command-center');
         CRUD::setEntityNameStrings('team command center', 'team command center');
     }
@@ -65,7 +66,8 @@ class TeamCommandCenterController extends CrudController
                 </div>';
             },
             'searchLogic' => function ($query, $column, $searchTerm) {
-                $query->orWhere('name', 'like', '%'.$searchTerm.'%');
+                $query->orWhere('first_name', 'like', '%'.$searchTerm.'%');
+                $query->orWhere('last_name', 'like', '%'.$searchTerm.'%');
                 $query->orWhere('email', 'like', '%'.$searchTerm.'%');
             },
             'escaped' => false,
@@ -194,10 +196,10 @@ class TeamCommandCenterController extends CrudController
         $today = Carbon::today();
 
         // Baseline: Total Employees
-        $totalEmployees = User::count();
+        $totalEmployees = Employee::count();
 
         // On Leave Today
-        $onLeaveTodayCount = User::whereHas('leaveRequests', function($q) use ($today) {
+        $onLeaveTodayCount = Employee::whereHas('leaveRequests', function($q) use ($today) {
             $q->where('status', 'APPROVED')
               ->where('start_date', '<=', $today)
               ->where('end_date', '>=', $today);
@@ -207,13 +209,13 @@ class TeamCommandCenterController extends CrudController
 
         // Working Now (On Shift + Delegation)
         // User has latest event as check_in or delegation_start today
-        $workingNowCount = User::whereHas('latestPresenceEvent', function ($query) use ($today) {
+        $workingNowCount = Employee::whereHas('latestPresenceEvent', function ($query) use ($today) {
             $query->whereIn('event_type', ['check_in', 'delegation_start'])
                   ->where('event_time', '>=', $today);
         })->count();
 
         // On Delegation Only
-        $onDelegationCount = User::whereHas('latestPresenceEvent', function ($query) use ($today) {
+        $onDelegationCount = Employee::whereHas('latestPresenceEvent', function ($query) use ($today) {
             $query->where('event_type', 'delegation_start')
                   ->where('event_time', '>=', $today);
         })->count();
@@ -273,7 +275,7 @@ class TeamCommandCenterController extends CrudController
         // --------------------------
         // Time Off Requests
         $timeOffRequests = LeaveRequest::where('status', 'PENDING')
-            ->with(['user', 'leaveType'])
+            ->with(['employee', 'leaveType'])
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
@@ -291,17 +293,24 @@ class TeamCommandCenterController extends CrudController
         }
 
         // Overtime: Check users with > 8h today
-        $users = User::query()->with([
+        $employees = Employee::query()->with([
             'presenceEvents' => function($q) use ($today) {
                 $q->where('event_time', '>=', $today)->orderBy('event_time');
             }
         ])->get();
 
-        $overtimeCount = $users->filter(function($u) {
+        $overtimeCount = $employees->filter(function($u) {
             $events = $u->presenceEvents; // Already filtered for today
             $mins = $this->calculateMinutesFromEvents($events);
             return $mins > (8 * 60);
         })->count();
+
+        $this->data['stats'] = [
+            'on_shift' => $workingNowCount,
+            'on_delegation' => $onDelegationCount,
+            'absent' => $absentCount,
+            'upcoming_leave' => $upcomingLeaveCount,
+        ];
 
         $this->data['actions'] = [
             'time_off_requests' => $timeOffRequests,
@@ -328,7 +337,7 @@ class TeamCommandCenterController extends CrudController
         $endOfMonth = $date->copy()->endOfMonth();
         $daysInMonth = $date->daysInMonth;
 
-        $users = User::with([
+        $employees = Employee::with([
             'department',
             'presenceEvents' => function($q) use ($startOfMonth, $endOfMonth) {
                 $q->whereBetween('event_time', [$startOfMonth, $endOfMonth])
@@ -348,10 +357,10 @@ class TeamCommandCenterController extends CrudController
         ])->get();
 
         $data = [];
-        foreach ($users as $user) {
+        foreach ($employees as $employee) {
             $userRow = [
-                'name' => $user->name,
-                'role' => $user->department ? $user->department->name : ($user->role ?? '-'),
+                'name' => $employee->name,
+                'role' => $employee->department ? $employee->department->name : '-',
                 'days' => [],
                 'totals' => [
                     'worked' => 0,
@@ -371,7 +380,7 @@ class TeamCommandCenterController extends CrudController
                 $isWeekend = $currentDay->isWeekend();
 
                 // Check for leave
-                $leave = $user->leaveRequests->first(function($req) use ($currentDay) {
+                $leave = $employee->leaveRequests->first(function($req) use ($currentDay) {
                     return $currentDay->between($req->start_date, $req->end_date);
                 });
 
@@ -396,7 +405,7 @@ class TeamCommandCenterController extends CrudController
                         $dayVal = ''; // Weekends are usually empty or X
                     } else {
                         // Calculate hours
-                        $dayEvents = $user->presenceEvents->filter(function($e) use ($currentDay) {
+                        $dayEvents = $employee->presenceEvents->filter(function($e) use ($currentDay) {
                             return $e->event_time->isSameDay($currentDay);
                         });
 

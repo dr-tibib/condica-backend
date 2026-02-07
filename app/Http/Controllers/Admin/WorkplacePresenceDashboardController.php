@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\Widget;
-use App\Models\User;
+use App\Models\Employee;
 use Carbon\Carbon;
 
 /**
@@ -19,7 +19,7 @@ class WorkplacePresenceDashboardController extends CrudController
 
     public function setup()
     {
-        $this->crud->setModel(User::class);
+        $this->crud->setModel(Employee::class);
         $this->crud->setRoute(backpack_url('workplace-presence'));
         $this->crud->setEntityNameStrings(__('workplace presence'), __('workplace presence'));
 
@@ -39,12 +39,12 @@ class WorkplacePresenceDashboardController extends CrudController
         // Only run expensive queries if not AJAX (Dashboard view)
         if (! $this->crud->getRequest()->ajax()) {
             // Widget: Currently Working (Real-time)
-            $currentlyWorkingCount = User::whereHas('latestPresenceEvent', function ($query) {
+            $currentlyWorkingCount = Employee::whereHas('latestPresenceEvent', function ($query) {
                 $query->where('event_type', 'check_in');
             })->count();
 
             // Widget: Active in Selected Range
-            $activeInRangeCount = User::whereHas('presenceEvents', function($q) use ($startDate, $endDate) {
+            $activeInRangeCount = Employee::whereHas('presenceEvents', function($q) use ($startDate, $endDate) {
                 $q->whereBetween('event_time', [$startDate, $endDate]);
             })->count();
 
@@ -74,7 +74,7 @@ class WorkplacePresenceDashboardController extends CrudController
         }]);
 
         // Also eager load department and workplace
-        $this->crud->query->with(['department', 'defaultWorkplace']);
+        $this->crud->query->with(['department', 'workplace']);
 
         // 4. Add Filter
         if ($this->crud->filters()->where('name', 'date_range')->isEmpty()) {
@@ -86,17 +86,24 @@ class WorkplacePresenceDashboardController extends CrudController
             false,
             function ($value) { // if the filter is active
                 // The filter logic is handled by the eager load modification above
-                // We don't filter the *User* list itself (we show all users),
-                // unless we want to hide users with no activity.
-                // For now, let's show all users.
+                // We don't filter the *Employee* list itself (we show all employees),
+                // unless we want to hide employees with no activity.
+                // For now, let's show all employees.
             });
         }
 
         // 5. Columns
         $this->crud->addColumn([
-            'name' => 'name',
+            'name' => 'employee_details',
             'label' => __('Employee'),
-            'type' => 'text',
+            'type' => 'closure',
+            'function' => function($entry) {
+                 return $entry->name; // Employee has getNameAttribute accessor
+            },
+             'searchLogic' => function ($query, $column, $searchTerm) {
+                $query->orWhere('first_name', 'like', '%'.$searchTerm.'%');
+                $query->orWhere('last_name', 'like', '%'.$searchTerm.'%');
+            }
         ]);
 
         $this->crud->addColumn([
@@ -135,7 +142,6 @@ class WorkplacePresenceDashboardController extends CrudController
             'type' => 'closure',
             'function' => function($entry) {
                 // Calculate total time from filtered events
-                // This logic needs to match User::calculateMinutesFromEvents but for the collection
                 return $this->calculateDurationString($entry->presenceEvents);
             }
         ]);

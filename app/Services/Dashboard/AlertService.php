@@ -2,7 +2,7 @@
 
 namespace App\Services\Dashboard;
 
-use App\Models\User;
+use App\Models\Employee;
 use App\Services\Dashboard\Alerts\AlertProvider;
 use App\Services\Dashboard\Alerts\Providers\MissingClockOutProvider;
 use App\Services\Dashboard\Alerts\Providers\RejectedLeaveProvider;
@@ -21,12 +21,12 @@ class AlertService
         ];
     }
 
-    public function getAlerts(User $user): Collection
+    public function getAlerts(Employee $employee): Collection
     {
         $alerts = collect();
 
         foreach ($this->providers as $provider) {
-            $alerts = $alerts->merge($provider->getAlerts($user));
+            $alerts = $alerts->merge($provider->getAlerts($employee));
         }
 
         return $alerts;

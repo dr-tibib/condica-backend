@@ -30,16 +30,6 @@ class User extends Authenticatable implements Syncable
         'email',
         'password',
         'is_global_superadmin',
-        'default_workplace_id',
-        'employee_id',
-        'department',
-        'role',
-        'address',
-        'id_document_type',
-        'id_document_number',
-        'personal_numeric_code',
-        'workplace_enter_code',
-        'department_id',
     ];
 
     /**
@@ -99,153 +89,10 @@ class User extends Authenticatable implements Syncable
     }
 
     /**
-     * Get all leave requests for this user.
+     * Get the employee profile for this user.
      */
-    public function leaveRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function employee(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
-        return $this->hasMany(LeaveRequest::class);
-    }
-
-    /**
-     * Get all presence events for this user.
-     */
-    public function presenceEvents(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(PresenceEvent::class);
-    }
-
-    /**
-     * Get the latest presence event for this user.
-     */
-    public function latestPresenceEvent(): \Illuminate\Database\Eloquent\Relations\HasOne
-    {
-        return $this->hasOne(PresenceEvent::class)->latestOfMany('event_time');
-    }
-
-    /**
-     * Get the latest presence event for this user.
-     */
-    public function latestCheckinCheckoutPresenceEvent(): \Illuminate\Database\Eloquent\Relations\HasOne
-    {
-        return $this->hasOne(PresenceEvent::class)
-            ->ofMany([
-                'event_time' => 'max'
-            ], function (Builder $query) {
-                $query->whereIn('event_type', ['check_in', 'check_out']);
-            });
-    }
-
-    /**
-     * Get the latest check-in event for this user.
-     */
-    public function latestCheckIn(): \Illuminate\Database\Eloquent\Relations\HasOne
-    {
-        return $this->hasOne(PresenceEvent::class)
-            ->whereIn('event_type', ['check_in', 'delegation_start'])
-            ->latestOfMany('event_time');
-    }
-
-    /**
-     * Get the latest check-out event for this user.
-     */
-    public function latestCheckOut(): \Illuminate\Database\Eloquent\Relations\HasOne
-    {
-        return $this->hasOne(PresenceEvent::class)
-            ->whereIn('event_type', ['check_out', 'delegation_end'])
-            ->latestOfMany('event_time');
-    }
-
-    /**
-     * Get all devices registered to this user.
-     */
-    public function devices(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(Device::class);
-    }
-
-    /**
-     * Get the default workplace for this user.
-     */
-    public function defaultWorkplace(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(Workplace::class, 'default_workplace_id');
-    }
-
-    public function department(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(Department::class);
-    }
-
-    /**
-     * Check if the user is currently present (last event was a check-in).
-     */
-    public function isCurrentlyPresent(): bool
-    {
-        $latestEvent = $this->latestCheckinCheckoutPresenceEvent;
-
-        return $latestEvent && in_array($latestEvent->event_type, ['check_in']);
-    }
-
-    /**
-     * Get the workplace where the user is currently present.
-     */
-    public function getCurrentWorkplace(): ?Workplace
-    {
-        if (! $this->isCurrentlyPresent()) {
-            return null;
-        }
-
-        return $this->latestCheckinCheckoutPresenceEvent->workplace;
-    }
-
-    /**
-     * Get total minutes worked today across all workplaces.
-     */
-    public function getTodayMinutes(): int
-    {
-        $events = $this->presenceEvents()
-            ->whereDate('event_time', today())
-            ->orderBy('event_time')
-            ->get();
-
-        return $this->calculateMinutesFromEvents($events);
-    }
-
-    /**
-     * Get total minutes worked this week across all workplaces.
-     */
-    public function getWeekMinutes(): int
-    {
-        $events = $this->presenceEvents()
-            ->whereBetween('event_time', [
-                now()->startOfWeek(),
-                now()->endOfWeek(),
-            ])
-            ->orderBy('event_time')
-            ->get();
-
-        return $this->calculateMinutesFromEvents($events);
-    }
-
-    /**
-     * Calculate total minutes from a collection of presence events.
-     *
-     * @param  \Illuminate\Support\Collection<int, PresenceEvent>  $events
-     */
-    private function calculateMinutesFromEvents(\Illuminate\Support\Collection $events): int
-    {
-        $totalMinutes = 0;
-        $currentCheckIn = null;
-
-        foreach ($events as $event) {
-            if ($event->isCheckIn()) {
-                $currentCheckIn = $event;
-            } elseif ($event->isCheckOut() && $currentCheckIn !== null) {
-                $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes($event->event_time);
-                $currentCheckIn = null;
-            }
-        }
-
-        return $totalMinutes;
+        return $this->hasOne(Employee::class);
     }
 }

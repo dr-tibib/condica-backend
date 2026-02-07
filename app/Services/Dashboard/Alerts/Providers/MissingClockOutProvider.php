@@ -2,16 +2,16 @@
 
 namespace App\Services\Dashboard\Alerts\Providers;
 
-use App\Models\User;
+use App\Models\Employee;
 use App\Services\Dashboard\Alerts\Alert;
 use App\Services\Dashboard\Alerts\AlertProvider;
 use Illuminate\Support\Collection;
 
 class MissingClockOutProvider implements AlertProvider
 {
-    public function getAlerts(User $user): Collection
+    public function getAlerts(Employee $employee): Collection
     {
-        $latest = $user->latestPresenceEvent;
+        $latest = $employee->latestPresenceEvent;
 
         // If the user is currently checked in, but the check-in was before today
         // (meaning they forgot to check out yesterday or earlier)
