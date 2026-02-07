@@ -4,6 +4,7 @@ namespace Tests\Feature\API;
 
 use App\Models\Delegation;
 use App\Models\DelegationPlace;
+use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\PresenceEvent;
@@ -25,9 +26,11 @@ class KioskDashboardTest extends TenantTestCase
 
         // 1. Setup Logins (Check-ins)
         $workplace = Workplace::factory()->create();
-        $user1 = User::factory()->create(['name' => 'User One']);
+        $user1 = User::factory()->create();
+        $employee1 = Employee::factory()->create(['user_id' => $user1->id, 'first_name' => 'User', 'last_name' => 'One']);
+
         $event1 = PresenceEvent::create([
-            'user_id' => $user1->id,
+            'employee_id' => $employee1->id,
             'workplace_id' => $workplace->id,
             'event_type' => 'check_in',
             'event_time' => now()->subMinutes(10),
@@ -35,9 +38,11 @@ class KioskDashboardTest extends TenantTestCase
         ]);
 
         // 1.1 Setup Check-out
-        $user1b = User::factory()->create(['name' => 'User One B']);
+        $user1b = User::factory()->create();
+        $employee1b = Employee::factory()->create(['user_id' => $user1b->id, 'first_name' => 'User', 'last_name' => 'One B']);
+
         PresenceEvent::create([
-            'user_id' => $user1b->id,
+            'employee_id' => $employee1b->id,
             'workplace_id' => $workplace->id,
             'event_type' => 'check_out',
             'event_time' => now()->subMinutes(5),
@@ -45,14 +50,16 @@ class KioskDashboardTest extends TenantTestCase
         ]);
 
         // 2. Setup Leave
-        $user2 = User::factory()->create(['name' => 'User Two']);
+        $user2 = User::factory()->create();
+        $employee2 = Employee::factory()->create(['user_id' => $user2->id, 'first_name' => 'User', 'last_name' => 'Two']);
+
         $leaveType = LeaveType::create([
             'name' => 'Test Leave',
             'is_paid' => true,
         ]);
 
         LeaveRequest::create([
-            'user_id' => $user2->id,
+            'employee_id' => $employee2->id,
             'start_date' => now()->subDay(),
             'end_date' => now()->addDay(),
             'status' => 'APPROVED',
@@ -61,12 +68,14 @@ class KioskDashboardTest extends TenantTestCase
         ]);
 
         // 3. Setup Delegation
-        $user3 = User::factory()->create(['name' => 'User Three']);
+        $user3 = User::factory()->create();
+        $employee3 = Employee::factory()->create(['user_id' => $user3->id, 'first_name' => 'User', 'last_name' => 'Three']);
+
         $vehicle = Vehicle::create(['name' => 'Car', 'license_plate' => 'B-123-TST']);
         $place = DelegationPlace::create(['name' => 'Test Place', 'google_place_id' => '123']);
 
         $startEvent = PresenceEvent::create([
-            'user_id' => $user3->id,
+            'employee_id' => $employee3->id,
             'workplace_id' => $workplace->id,
             'event_type' => 'delegation_start',
             'event_time' => now()->subMinutes(30),
@@ -74,7 +83,7 @@ class KioskDashboardTest extends TenantTestCase
         ]);
 
         Delegation::create([
-            'user_id' => $user3->id,
+            'employee_id' => $employee3->id,
             'start_event_id' => $startEvent->id,
             'name' => 'Test Delegation',
             'vehicle_id' => $vehicle->id,
@@ -82,9 +91,11 @@ class KioskDashboardTest extends TenantTestCase
         ]);
 
         // 3.1 Setup Delegation End
-        $user3b = User::factory()->create(['name' => 'User Three B']);
+        $user3b = User::factory()->create();
+        $employee3b = Employee::factory()->create(['user_id' => $user3b->id, 'first_name' => 'User', 'last_name' => 'Three B']);
+
         PresenceEvent::create([
-            'user_id' => $user3b->id,
+            'employee_id' => $employee3b->id,
             'workplace_id' => $workplace->id,
             'event_type' => 'delegation_end',
             'event_time' => now()->subMinutes(15),
@@ -102,28 +113,28 @@ class KioskDashboardTest extends TenantTestCase
 
         // Check Logins
         $response->assertJsonFragment([
-            'user' => 'User One',
+            'employee' => 'User One',
             'type' => 'check_in',
         ]);
 
         $response->assertJsonFragment([
-            'user' => 'User One B',
+            'employee' => 'User One B',
             'type' => 'check_out',
         ]);
 
         $response->assertJsonFragment([
-            'user' => 'User Three B',
+            'employee' => 'User Three B',
             'type' => 'delegation_end',
         ]);
 
         // Check Leave
         $response->assertJsonFragment([
-            'user' => 'User Two',
+            'employee' => 'User Two',
         ]);
 
         // Check Delegation
         $response->assertJsonFragment([
-            'user' => 'User Three',
+            'employee' => 'User Three',
             'destination' => 'Test Place',
             'vehicle' => 'B-123-TST',
         ]);

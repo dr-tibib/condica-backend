@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\API;
 
+use App\Models\Employee;
+use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\Tenant;
@@ -27,6 +29,7 @@ class LeaveManagementTest extends TenantTestCase
     public function test_get_balance()
     {
         $user = User::factory()->create();
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user)->getJson("{$this->getDomainUrl()}/api/v1/leave/balance");
 
@@ -37,6 +40,7 @@ class LeaveManagementTest extends TenantTestCase
     public function test_create_request_success()
     {
         $user = User::factory()->create();
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
         $type = LeaveType::where('name', 'Concediu Odihnă')->first();
 
         $response = $this->actingAs($user)->postJson("{$this->getDomainUrl()}/api/v1/leave/request", [
@@ -47,7 +51,7 @@ class LeaveManagementTest extends TenantTestCase
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('leave_requests', [
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'status' => 'PENDING',
         ]);
     }
@@ -55,10 +59,11 @@ class LeaveManagementTest extends TenantTestCase
     public function test_create_request_overlap()
     {
         $user = User::factory()->create();
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
         $type = LeaveType::first();
 
         LeaveRequest::create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'leave_type_id' => $type->id,
             'start_date' => now()->addDays(5),
             'end_date' => now()->addDays(7),
@@ -79,6 +84,7 @@ class LeaveManagementTest extends TenantTestCase
     public function test_sick_leave_requires_medical_code()
     {
         $user = User::factory()->create();
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
         $type = LeaveType::where('name', 'Concediu Medical')->first();
 
         $response = $this->actingAs($user)->postJson("{$this->getDomainUrl()}/api/v1/leave/request", [
@@ -94,14 +100,16 @@ class LeaveManagementTest extends TenantTestCase
 
     public function test_manager_approval()
     {
-        $manager = User::factory()->create();
-        $manager->assignRole('manager');
+        $managerUser = User::factory()->create();
+        $managerEmployee = Employee::factory()->create(['user_id' => $managerUser->id]);
+        $managerUser->assignRole('manager');
 
         $user = User::factory()->create();
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
         $type = LeaveType::first();
 
         $request = LeaveRequest::create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'leave_type_id' => $type->id,
             'start_date' => now()->addDays(10),
             'end_date' => now()->addDays(12),
@@ -109,18 +117,18 @@ class LeaveManagementTest extends TenantTestCase
             'status' => 'PENDING',
         ]);
 
-        $response = $this->actingAs($manager)->postJson("{$this->getDomainUrl()}/api/v1/leave/approve", [
+        $response = $this->actingAs($managerUser)->postJson("{$this->getDomainUrl()}/api/v1/leave/approve", [
             'request_id' => $request->id,
             'status' => 'APPROVED',
         ]);
 
         $response->assertStatus(200);
         $this->assertEquals('APPROVED', $request->fresh()->status);
-        $this->assertEquals($manager->id, $request->fresh()->approver_id);
+        $this->assertEquals($managerEmployee->id, $request->fresh()->approver_id);
 
         // Verify balance updated via Observer
         $this->assertDatabaseHas('leave_balances', [
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'taken' => 3
         ]);
     }
@@ -128,8 +136,10 @@ class LeaveManagementTest extends TenantTestCase
     public function test_approval_unauthorized()
     {
         $user = User::factory()->create(); // No role
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
+
         $request = LeaveRequest::create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'leave_type_id' => LeaveType::first()->id,
             'start_date' => now()->addDays(10),
             'end_date' => now()->addDays(12),
@@ -148,10 +158,11 @@ class LeaveManagementTest extends TenantTestCase
     public function test_admin_direct_approval_updates_balance()
     {
         $user = User::factory()->create();
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
         $type = LeaveType::where('name', 'Concediu Odihnă')->first(); // Ensure it affects quota
 
         $request = LeaveRequest::create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'leave_type_id' => $type->id,
             'start_date' => now()->addDays(20),
             'end_date' => now()->addDays(22),
@@ -165,7 +176,7 @@ class LeaveManagementTest extends TenantTestCase
 
         // Check balance
         $this->assertDatabaseHas('leave_balances', [
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'taken' => 3
         ]);
     }
@@ -173,12 +184,15 @@ class LeaveManagementTest extends TenantTestCase
     public function test_clock_in_blocked_on_leave()
     {
         $user = User::factory()->create();
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
         $type = LeaveType::first();
         $workplace = Workplace::create(['name' => 'Office', 'status' => 'active']);
+        $employee->workplace_id = $workplace->id;
+        $employee->save();
 
         // Create approved leave for today
         LeaveRequest::create([
-            'user_id' => $user->id,
+            'employee_id' => $employee->id,
             'leave_type_id' => $type->id,
             'start_date' => now()->subDay(),
             'end_date' => now()->addDay(),
@@ -200,6 +214,7 @@ class LeaveManagementTest extends TenantTestCase
     public function test_export_payroll()
     {
         $user = User::factory()->create();
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
         $user->assignRole('hr');
 
         $response = $this->actingAs($user)->get("{$this->getDomainUrl()}/api/v1/admin/export/payroll");
@@ -211,6 +226,7 @@ class LeaveManagementTest extends TenantTestCase
     public function test_export_payroll_unauthorized()
     {
         $user = User::factory()->create();
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user)->get("{$this->getDomainUrl()}/api/v1/admin/export/payroll");
 
