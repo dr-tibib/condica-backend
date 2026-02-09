@@ -42,7 +42,7 @@ class PresenceEventCrudController extends CrudController
     protected function setupListOperation()
     {
         // Columns
-        CRUD::column('user')->type('relationship')->label(__('User'))->attribute('name');
+        CRUD::column('employee')->type('relationship')->label(__('Employee'))->attribute('name');
 
         CRUD::column('workplace')->type('relationship')->label(__('Workplace'))->attribute('name');
 
@@ -96,14 +96,14 @@ class PresenceEventCrudController extends CrudController
             ->escaped(false);
 
         // Filters
-        CRUD::filter('user')
-            ->label(__('User'))
+        CRUD::filter('employee')
+            ->label(__('Employee'))
             ->type('select2')
             ->values(function () {
-                return \App\Models\User::all()->pluck('name', 'id')->toArray();
+                return \App\Models\Employee::all()->pluck('name', 'id')->toArray();
             })
             ->whenActive(function ($value) {
-                CRUD::addClause('where', 'user_id', $value);
+                CRUD::addClause('where', 'employee_id', $value);
             });
 
         CRUD::filter('workplace')
@@ -172,7 +172,7 @@ class PresenceEventCrudController extends CrudController
             // Headers
             fputcsv($file, [
                 __('ID'),
-                __('User'),
+                __('Employee'),
                 __('Workplace'),
                 __('Event Type'),
                 __('Event Time'),
@@ -187,7 +187,7 @@ class PresenceEventCrudController extends CrudController
             foreach ($entries as $entry) {
                 fputcsv($file, [
                     $entry->id,
-                    $entry->user->name,
+                    $entry->employee->name,
                     $entry->workplace->name,
                     $entry->event_type,
                     $entry->event_time->format('Y-m-d H:i:s'),
