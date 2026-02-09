@@ -28,7 +28,7 @@ class DelegationCrudController extends CrudController
 
     protected function setupListOperation()
     {
-        CRUD::column('user')->type('relationship')->label('User');
+        CRUD::column('employee')->type('relationship')->label('User');
 
         CRUD::column('place_info')
             ->type('place_card')
@@ -52,7 +52,7 @@ class DelegationCrudController extends CrudController
     {
         CRUD::setValidation(DelegationRequest::class);
 
-        CRUD::field('user')->type('relationship')->label('User');
+        CRUD::field('employee')->type('relationship')->label('User');
         CRUD::field('delegationPlace')->type('relationship')->label('Delegation Place');
         CRUD::field('vehicle')->type('relationship')->label('Vehicle');
 
