@@ -20,7 +20,7 @@ class LeaveRequestCrudController extends CrudController
 
     protected function setupListOperation()
     {
-        CRUD::column('user')->type('relationship')->attribute('name')->label('Employee');
+        CRUD::column('employee')->type('relationship')->attribute('name')->label('Employee');
         CRUD::column('leaveType')->type('relationship')->attribute('name')->label('Type');
         CRUD::column('start_date')->type('date');
         CRUD::column('end_date')->type('date');
@@ -30,7 +30,7 @@ class LeaveRequestCrudController extends CrudController
 
     protected function setupShowOperation()
     {
-        CRUD::column('user')->type('relationship')->attribute('name')->label('Employee');
+        CRUD::column('employee')->type('relationship')->attribute('name')->label('Employee');
         CRUD::column('leaveType')->type('relationship')->attribute('name')->label('Type');
         CRUD::column('start_date')->type('date');
         CRUD::column('end_date')->type('date');
