@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Clock from '../components/Clock';
 import FlowSelector from '../components/FlowSelector';
 import CodeInput from '../components/CodeInput';
-import Dashboard from '../components/Dashboard';
+import Dashboard, { DashboardData } from '../components/Dashboard';
 import { getKioskWorkplaceId } from '../../utils/kiosk';
 
 const Home = () => {
@@ -16,6 +16,11 @@ const Home = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [lastActionTime, setLastActionTime] = useState(Date.now());
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    latest_logins: [],
+    on_leave: [],
+    active_delegations: []
+  });
 
   useEffect(() => {
     if (location.state?.success) {
@@ -24,6 +29,21 @@ const Home = () => {
       setTimeout(() => setSuccess(null), 3000);
     }
   }, [location.state, navigate, location.pathname]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get('/api/kiosk/dashboard');
+        setDashboardData(response.data);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data', error);
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
+  }, [lastActionTime]);
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -73,7 +93,26 @@ const Home = () => {
           <div className="bg-primary text-white font-black text-4xl px-3 py-1 rounded">HD</div>
           <div className="text-primary dark:text-blue-400 font-extrabold text-3xl tracking-tight uppercase">Hidraulica</div>
         </div>
-        <Clock />
+        <div className="flex items-center gap-6">
+          {dashboardData.stats && (
+            <div className="flex items-center gap-4 text-xl font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 px-4 py-2 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-green-500">how_to_reg</span>
+                <span>{dashboardData.stats.present_count}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-500">flight_takeoff</span>
+                <span>{dashboardData.stats.active_delegations_count}</span>
+              </div>
+              <div className="text-slate-300 dark:text-slate-600">/</div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-slate-400">groups</span>
+                <span>{dashboardData.stats.total_employees}</span>
+              </div>
+            </div>
+          )}
+          <Clock />
+        </div>
       </header>
       
       <FlowSelector
@@ -94,7 +133,7 @@ const Home = () => {
         </div>
       )}
 
-      <Dashboard refreshTrigger={lastActionTime} refreshInterval={10000} />
+      <Dashboard data={dashboardData} />
     </div>
   );
 };
