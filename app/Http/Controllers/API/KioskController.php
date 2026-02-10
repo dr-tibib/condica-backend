@@ -37,6 +37,62 @@ class KioskController extends Controller
         ]);
     }
 
+    public function getAllEmployeesStatus(): JsonResponse
+    {
+        $employees = Employee::with([
+            'latestCheckinCheckoutPresenceEvent',
+            'latestPresenceEvent',
+            'leaveRequests' => function ($query) {
+                $query->where('status', 'APPROVED')
+                      ->whereDate('start_date', '<=', now())
+                      ->whereDate('end_date', '>=', now());
+            },
+            'delegations' => function ($query) {
+                 $query->whereHas('startEvent', function ($q) {
+                    $q->whereNull('pair_event_id');
+                });
+            }
+        ])
+        ->orderBy('first_name')
+        ->orderBy('last_name')
+        ->get()
+        ->map(function ($employee) {
+            $status = 'absent';
+            $details = null;
+
+            // Check Leave
+            if ($employee->leaveRequests->isNotEmpty()) {
+                $status = 'leave';
+                $details = 'Concediu până la ' . $employee->leaveRequests->first()->end_date->format('d.m');
+            }
+            // Check Delegation
+            elseif ($employee->delegations->isNotEmpty()) {
+                $status = 'delegation';
+                $delegation = $employee->delegations->first();
+                $destination = $delegation->delegationPlace ? $delegation->delegationPlace->name : ($delegation->address ?? $delegation->name ?? 'Delegatie');
+                $details = $destination;
+            }
+            // Check Present
+            elseif ($employee->isCurrentlyPresent()) {
+                $status = 'present';
+                $lastEvent = $employee->latestCheckinCheckoutPresenceEvent;
+                $details = 'Prezent de la ' . ($lastEvent ? $lastEvent->event_time->format('H:i') : '-');
+            }
+
+            return [
+                'id' => $employee->id,
+                'name' => $employee->name,
+                'avatar' => $employee->avatar_url,
+                'status' => $status,
+                'details' => $details,
+            ];
+        });
+
+        return response()->json([
+            'data' => $employees,
+        ]);
+    }
+
     public function getDashboardData(): JsonResponse
     {
         // 1. Latest Logins

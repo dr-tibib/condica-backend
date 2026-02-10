@@ -5,6 +5,7 @@ import Clock from '../components/Clock';
 import FlowSelector from '../components/FlowSelector';
 import CodeInput from '../components/CodeInput';
 import Dashboard, { DashboardData } from '../components/Dashboard';
+import PresenceModal from '../components/PresenceModal';
 import { getKioskWorkplaceId } from '../../utils/kiosk';
 
 const Home = () => {
@@ -16,6 +17,7 @@ const Home = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [lastActionTime, setLastActionTime] = useState(Date.now());
+  const [isPresenceModalOpen, setIsPresenceModalOpen] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     latest_logins: [],
     on_leave: [],
@@ -95,7 +97,10 @@ const Home = () => {
         </div>
         <div className="flex items-center gap-6">
           {dashboardData.stats && (
-            <div className="flex items-center gap-4 text-xl font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 px-4 py-2 rounded-lg">
+            <button
+              onClick={() => setIsPresenceModalOpen(true)}
+              className="flex items-center gap-4 text-xl font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 px-4 py-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            >
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-green-500">how_to_reg</span>
                 <span>{dashboardData.stats.present_count}</span>
@@ -109,7 +114,7 @@ const Home = () => {
                 <span className="material-symbols-outlined text-slate-400">groups</span>
                 <span>{dashboardData.stats.total_employees}</span>
               </div>
-            </div>
+            </button>
           )}
           <Clock />
         </div>
@@ -134,6 +139,11 @@ const Home = () => {
       )}
 
       <Dashboard data={dashboardData} />
+
+      <PresenceModal
+        isOpen={isPresenceModalOpen}
+        onClose={() => setIsPresenceModalOpen(false)}
+      />
     </div>
   );
 };
