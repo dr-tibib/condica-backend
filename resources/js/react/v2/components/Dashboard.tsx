@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React from 'react';
 
-interface DashboardData {
+export interface DashboardData {
     latest_logins: {
         id: number;
         employee: string;
@@ -19,35 +18,18 @@ interface DashboardData {
         destination: string;
         vehicle: string;
     }[];
+    stats?: {
+        total_employees: number;
+        present_count: number;
+        active_delegations_count: number;
+    };
 }
 
 interface DashboardProps {
-    refreshTrigger?: number;
-    refreshInterval?: number;
+    data: DashboardData;
 }
 
-const Dashboard = ({ refreshTrigger = 0, refreshInterval = 10000 }: DashboardProps) => {
-  const [data, setData] = useState<DashboardData>({
-      latest_logins: [],
-      on_leave: [],
-      active_delegations: []
-  });
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get('/api/kiosk/dashboard');
-        setData(response.data);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data', error);
-      }
-    };
-
-    fetchData();
-    const interval = setInterval(fetchData, refreshInterval);
-    return () => clearInterval(interval);
-  }, [refreshTrigger, refreshInterval]);
-
+const Dashboard = ({ data }: DashboardProps) => {
   const getEventConfig = (type: string) => {
       switch (type) {
           case 'check_in':

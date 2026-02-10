@@ -189,4 +189,60 @@ class KioskControllerTest extends TenantTestCase
             'event_type' => 'delegation_end',
         ]);
     }
+
+    public function test_dashboard_data_includes_stats()
+    {
+        $tenant = Tenant::first();
+        $workplace = Workplace::factory()->create();
+
+        // 1. Employee Present
+        $employee1 = Employee::factory()->create(['workplace_id' => $workplace->id]);
+        $employee1->presenceEvents()->create([
+            'workplace_id' => $workplace->id,
+            'event_type' => 'check_in',
+            'event_time' => now()->subHour(),
+            'method' => 'kiosk',
+        ]);
+
+        // 2. Employee in Delegation
+        $employee2 = Employee::factory()->create(['workplace_id' => $workplace->id]);
+        $delegationStart = $employee2->presenceEvents()->create([
+            'workplace_id' => $workplace->id,
+            'event_type' => 'delegation_start',
+            'event_time' => now()->subHour(),
+            'method' => 'kiosk',
+        ]);
+        // Create Delegation record
+        \App\Models\Delegation::create([
+             'employee_id' => $employee2->id,
+             'start_event_id' => $delegationStart->id,
+             'start_date' => now()->subHour(),
+             'name' => 'Trip',
+        ]);
+
+        // 3. Employee Inactive (just created)
+        $employee3 = Employee::factory()->create(['workplace_id' => $workplace->id]);
+
+        $domain = $tenant->domains->first()->domain;
+        $response = $this->getJson("http://{$domain}/api/kiosk/dashboard");
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'latest_logins',
+                'on_leave',
+                'active_delegations',
+                'stats' => [
+                    'total_employees',
+                    'present_count',
+                    'active_delegations_count',
+                ]
+            ]);
+
+        $stats = $response->json('stats');
+
+        // Assertions
+        $this->assertEquals(1, $stats['present_count'], 'Present count mismatch');
+        $this->assertEquals(1, $stats['active_delegations_count'], 'Delegation count mismatch');
+        $this->assertGreaterThanOrEqual(3, $stats['total_employees']);
+    }
 }

@@ -69,11 +69,14 @@ class KioskController extends Controller
             });
 
         // 3. Active Delegations
-        $activeDelegations = Delegation::with(['employee', 'vehicle', 'delegationPlace'])
+        $activeDelegationsQuery = Delegation::with(['employee', 'vehicle', 'delegationPlace'])
             ->whereHas('startEvent', function ($query) {
                 $query->whereNull('pair_event_id');
-            })
-            ->get()
+            });
+
+        $activeDelegationsCount = $activeDelegationsQuery->count();
+
+        $activeDelegations = $activeDelegationsQuery->get()
             ->map(function ($delegation) {
                 $destination = $delegation->delegationPlace ? $delegation->delegationPlace->name : ($delegation->address ?? $delegation->name);
                 return [
@@ -84,10 +87,25 @@ class KioskController extends Controller
                 ];
             });
 
+        // 4. Counts
+        $totalEmployees = Employee::count();
+
+        // Present Count
+        $presentCount = Employee::with('latestCheckinCheckoutPresenceEvent')->get()
+            ->filter(function ($employee) {
+                return $employee->isCurrentlyPresent();
+            })
+            ->count();
+
         return response()->json([
             'latest_logins' => $latestLogins,
             'on_leave' => $onLeave,
             'active_delegations' => $activeDelegations,
+            'stats' => [
+                'total_employees' => $totalEmployees,
+                'present_count' => $presentCount,
+                'active_delegations_count' => $activeDelegationsCount,
+            ]
         ]);
     }
 
