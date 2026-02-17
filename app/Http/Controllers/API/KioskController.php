@@ -197,70 +197,7 @@ class KioskController extends Controller
             $isDelegated = $latestEvent && $latestEvent->isDelegationStart();
 
             if ($flow === 'delegation' && $isDelegated) {
-                // Check duration for long delegations
-                $start = $latestEvent->event_time;
-                $now = now();
-                $durationHours = $start->diffInHours($now);
-
-                if ($durationHours > 24) {
-                    // Fetch Shift Settings
-                    $shiftStart = \Backpack\Settings\app\Models\Setting::get('shift_start') ?? '08:00';
-                    $shiftEnd = \Backpack\Settings\app\Models\Setting::get('shift_end') ?? '17:00';
-
-                    // Generate Dates
-                    $dates = [];
-                    $period = \Carbon\CarbonPeriod::create($start->copy()->startOfDay(), '1 day', $now->copy()->startOfDay());
-
-                    foreach ($period as $date) {
-                        $d = $date->format('Y-m-d');
-                        $defaultStart = $shiftStart;
-                        $defaultEnd = $shiftEnd;
-
-                        if ($date->isSameDay($start)) {
-                            $defaultStart = $start->format('H:i');
-                        }
-                        if ($date->isSameDay($now)) {
-                            $defaultEnd = $now->format('H:i');
-                        }
-
-                        $dates[] = [
-                            'date' => $d,
-                            'start' => $defaultStart,
-                            'end' => $defaultEnd,
-                        ];
-                    }
-
-                    return response()->json([
-                        'message' => 'Delegation spans multiple days.',
-                        'type' => 'delegation_end_schedule_required',
-                        'employee' => [
-                            'name' => $employee->name,
-                            'id' => $employee->id,
-                        ],
-                        'delegation_start_time' => $start->format('Y-m-d H:i:s'),
-                        'schedule_days' => $dates,
-                        'shift_settings' => [
-                            'start' => $shiftStart,
-                            'end' => $shiftEnd,
-                        ],
-                    ]);
-                }
-
-                // End delegation normal flow
-                $event = $this->presenceService->delegationEndOnly($employee, [
-                    'method' => 'kiosk',
-                    'device_info' => $validated['device_info'] ?? null,
-                ]);
-
-                return response()->json([
-                    'message' => 'Delegation ended successfully.',
-                    'type' => 'delegation_end',
-                    'employee' => [
-                        'name' => $employee->name,
-                    ],
-                    'time' => $event->event_time->format('g:i A'),
-                    'event' => $event,
-                ]);
+                return $this->handleDelegationEnd($employee, $validated['device_info'] ?? null);
             }
 
             return response()->json([
@@ -278,26 +215,19 @@ class KioskController extends Controller
 
         // Regular flow: Check In / Check Out
         try {
-            if ($employee->isCurrentlyPresent()) {
-                $latestEvent = $employee->latestPresenceEvent;
+            $latestEvent = $employee->latestPresenceEvent;
+            $isDelegated = $latestEvent && $latestEvent->isDelegationStart();
 
-                if ($latestEvent && $latestEvent->isDelegationStart()) {
-                    // Only end the delegation, do not check out completely
-                    $event = $this->presenceService->delegationEndOnly($employee, [
-                        'method' => 'kiosk',
-                        'device_info' => $validated['device_info'] ?? null,
-                    ]);
-                    $message = 'Delegation ended successfully.';
-                    $type = 'delegation_end';
-                } else {
-                    // Check Out
-                    $event = $this->presenceService->checkOut($employee, [
-                        'method' => 'kiosk',
-                        'device_info' => $validated['device_info'] ?? null,
-                    ]);
-                    $message = 'Checked out successfully.';
-                    $type = 'checkout';
-                }
+            if ($isDelegated) {
+                return $this->handleDelegationEnd($employee, $validated['device_info'] ?? null);
+            } elseif ($employee->isCurrentlyPresent()) {
+                // Check Out
+                $event = $this->presenceService->checkOut($employee, [
+                    'method' => 'kiosk',
+                    'device_info' => $validated['device_info'] ?? null,
+                ]);
+                $message = 'Checked out successfully.';
+                $type = 'checkout';
             } else {
                 // Check In
                 $workplaceId = $validated['workplace_id'] ?? $employee->workplace_id;
@@ -417,6 +347,76 @@ class KioskController extends Controller
                 'message' => $e->getMessage(),
             ], 400);
         }
+    }
+
+    private function handleDelegationEnd(Employee $employee, ?array $deviceInfo): JsonResponse
+    {
+        $latestEvent = $employee->latestPresenceEvent;
+
+        // Check duration for long delegations
+        $start = $latestEvent->event_time;
+        $now = now();
+        $durationHours = $start->diffInHours($now);
+
+        if ($durationHours > 24) {
+            // Fetch Shift Settings
+            $shiftStart = \Backpack\Settings\app\Models\Setting::get('shift_start') ?? '08:00';
+            $shiftEnd = \Backpack\Settings\app\Models\Setting::get('shift_end') ?? '17:00';
+
+            // Generate Dates
+            $dates = [];
+            $period = \Carbon\CarbonPeriod::create($start->copy()->startOfDay(), '1 day', $now->copy()->startOfDay());
+
+            foreach ($period as $date) {
+                $d = $date->format('Y-m-d');
+                $defaultStart = $shiftStart;
+                $defaultEnd = $shiftEnd;
+
+                if ($date->isSameDay($start)) {
+                    $defaultStart = $start->format('H:i');
+                }
+                if ($date->isSameDay($now)) {
+                    $defaultEnd = $now->format('H:i');
+                }
+
+                $dates[] = [
+                    'date' => $d,
+                    'start' => $defaultStart,
+                    'end' => $defaultEnd,
+                ];
+            }
+
+            return response()->json([
+                'message' => 'Delegation spans multiple days.',
+                'type' => 'delegation_end_schedule_required',
+                'employee' => [
+                    'name' => $employee->name,
+                    'id' => $employee->id,
+                ],
+                'delegation_start_time' => $start->format('Y-m-d H:i:s'),
+                'schedule_days' => $dates,
+                'shift_settings' => [
+                    'start' => $shiftStart,
+                    'end' => $shiftEnd,
+                ],
+            ]);
+        }
+
+        // End delegation normal flow
+        $event = $this->presenceService->delegationEndOnly($employee, [
+            'method' => 'kiosk',
+            'device_info' => $deviceInfo,
+        ]);
+
+        return response()->json([
+            'message' => 'Delegation ended successfully.',
+            'type' => 'delegation_end',
+            'employee' => [
+                'name' => $employee->name,
+            ],
+            'time' => $event->event_time->format('g:i A'),
+            'event' => $event,
+        ]);
     }
 
 }
