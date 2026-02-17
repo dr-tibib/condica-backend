@@ -11,6 +11,7 @@ use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\PresenceEvent;
+use App\Models\PublicHoliday;
 use App\Models\Vehicle;
 use App\Services\PresenceService;
 use Illuminate\Http\JsonResponse;
@@ -367,7 +368,17 @@ class KioskController extends Controller
             $dates = [];
             $period = \Carbon\CarbonPeriod::create($start->copy()->startOfDay(), '1 day', $now->copy()->startOfDay());
 
+            $holidays = PublicHoliday::whereBetween('date', [$start->copy()->startOfDay(), $now->copy()->startOfDay()])
+                ->get()
+                ->map(fn($h) => $h->date->format('Y-m-d'))
+                ->toArray();
+
             foreach ($period as $date) {
+                // Skip weekends and holidays
+                if ($date->isWeekend() || in_array($date->format('Y-m-d'), $holidays)) {
+                    continue;
+                }
+
                 $d = $date->format('Y-m-d');
                 $defaultStart = $shiftStart;
                 $defaultEnd = $shiftEnd;
