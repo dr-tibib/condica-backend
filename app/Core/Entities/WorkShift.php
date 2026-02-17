@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Core\Entities;
 
-use Carbon\Carbon;
+use DateTimeInterface;
 
 class WorkShift
 {
-    private Carbon $startTime;
-    private ?Carbon $endTime;
+    private DateTimeInterface $startTime;
+    private ?DateTimeInterface $endTime;
 
-    public function __construct(Carbon $startTime, ?Carbon $endTime = null)
+    public function __construct(DateTimeInterface $startTime, ?DateTimeInterface $endTime = null)
     {
         $this->startTime = $startTime;
         $this->endTime = $endTime;
@@ -20,23 +20,21 @@ class WorkShift
     /**
      * logic: isOvernight(): Returns true if the system clock detects a transition past 00:00 without a checkout.
      */
-    public function isOvernight(?Carbon $now = null): bool
+    public function isOvernight(DateTimeInterface $now): bool
     {
         if ($this->endTime !== null) {
             return false;
         }
 
-        $now = $now ?? Carbon::now();
-
-        return ! $this->startTime->isSameDay($now);
+        return $this->startTime->format('Y-m-d') !== $now->format('Y-m-d');
     }
 
-    public function getStartTime(): Carbon
+    public function getStartTime(): DateTimeInterface
     {
         return $this->startTime;
     }
 
-    public function getEndTime(): ?Carbon
+    public function getEndTime(): ?DateTimeInterface
     {
         return $this->endTime;
     }
