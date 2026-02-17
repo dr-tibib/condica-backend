@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import Clock from '../components/Clock';
+import TimePicker from '../components/TimePicker';
 
 interface ScheduleDay {
   date: string;
@@ -18,6 +20,7 @@ interface ScheduleState {
 }
 
 const DelegationSchedule = () => {
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as ScheduleState;
@@ -44,6 +47,10 @@ const DelegationSchedule = () => {
       const newSchedule = [...schedule];
       newSchedule[index] = { ...newSchedule[index], [field]: value };
       setSchedule(newSchedule);
+  };
+
+  const handleDeleteDay = (index: number) => {
+      setSchedule(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleBack = () => {
@@ -96,34 +103,47 @@ const DelegationSchedule = () => {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {schedule.map((day, index) => (
-                  <div key={day.date} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                      <div className="font-bold text-lg mb-3 border-b border-slate-100 dark:border-slate-700 pb-2 flex justify-between">
-                          <span>Ziua {index + 1}</span>
-                          <span className="text-slate-500 font-normal text-base">{day.date}</span>
-                      </div>
-                      <div className="flex gap-4">
-                          <div className="flex-1">
-                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Start</label>
-                              <input
-                                  type="time"
-                                  value={day.start_time}
-                                  onChange={(e) => handleTimeChange(index, 'start_time', e.target.value)}
-                                  className="w-full p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-xl font-mono focus:ring-2 focus:ring-blue-500 outline-none"
-                              />
+              {schedule.map((day, index) => {
+                  const dateObj = new Date(day.date + 'T00:00:00');
+                  const weekday = dateObj.toLocaleDateString(i18n.language, { weekday: 'long' });
+                  const displayDate = weekday.charAt(0).toUpperCase() + weekday.slice(1) + ', ' + day.date;
+
+                  return (
+                      <div key={day.date} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 relative">
+                          <div className="font-bold text-lg mb-3 border-b border-slate-100 dark:border-slate-700 pb-2 flex justify-between items-start">
+                              <div className="flex flex-col">
+                                  <span>Ziua {index + 1}</span>
+                                  <span className="text-slate-500 dark:text-slate-400 font-normal text-sm capitalize">{displayDate}</span>
+                              </div>
+                              <button
+                                  onClick={() => handleDeleteDay(index)}
+                                  className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  title="Elimină ziua"
+                              >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                              </button>
                           </div>
-                          <div className="flex-1">
-                              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Sfârșit</label>
-                              <input
-                                  type="time"
-                                  value={day.end_time}
-                                  onChange={(e) => handleTimeChange(index, 'end_time', e.target.value)}
-                                  className="w-full p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-xl font-mono focus:ring-2 focus:ring-blue-500 outline-none"
-                              />
+                          <div className="flex gap-4">
+                              <div className="flex-1">
+                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Start</label>
+                                  <TimePicker
+                                      value={day.start_time}
+                                      onChange={(val) => handleTimeChange(index, 'start_time', val)}
+                                  />
+                              </div>
+                              <div className="flex-1">
+                                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Sfârșit</label>
+                                  <TimePicker
+                                      value={day.end_time}
+                                      onChange={(val) => handleTimeChange(index, 'end_time', val)}
+                                  />
+                              </div>
                           </div>
                       </div>
-                  </div>
-              ))}
+                  );
+              })}
           </div>
       </div>
 
