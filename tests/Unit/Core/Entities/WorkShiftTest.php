@@ -26,14 +26,7 @@ test('isOvernight returns false if shift has ended', function () {
     $endTime = Carbon::create(2023, 10, 27, 1, 0, 0); // Ended next day
     $workShift = new WorkShift($startTime, $endTime);
 
-    // Even if we check "now" which is later, it should return false because it's not an active overnight shift without checkout
-    expect($workShift->isOvernight())->toBeFalse();
-});
+    $now = Carbon::create(2023, 10, 27, 2, 0, 0);
 
-test('isOvernight uses current time if not provided', function () {
-    Carbon::setTestNow(Carbon::create(2023, 10, 27, 1, 0, 0));
-    $startTime = Carbon::create(2023, 10, 26, 23, 0, 0);
-    $workShift = new WorkShift($startTime);
-
-    expect($workShift->isOvernight())->toBeTrue();
+    expect($workShift->isOvernight($now))->toBeFalse();
 });

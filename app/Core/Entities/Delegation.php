@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Core\Entities;
 
-use Carbon\Carbon;
-use Carbon\CarbonPeriod;
+use App\Core\Contracts\HolidayProvider;
+use DateInterval;
+use DatePeriod;
+use DateTimeImmutable;
+use DateTimeInterface;
 
 class Delegation
 {
-    private Carbon $startTime;
-    private ?Carbon $endTime;
+    private DateTimeInterface $startTime;
+    private ?DateTimeInterface $endTime;
 
-    public function __construct(Carbon $startTime, ?Carbon $endTime = null)
+    public function __construct(DateTimeInterface $startTime, ?DateTimeInterface $endTime = null)
     {
         $this->startTime = $startTime;
         $this->endTime = $endTime;
@@ -21,37 +24,59 @@ class Delegation
     /**
      * logic: isMultiDay(): True if start_date and end_date differ.
      */
-    public function isMultiDay(?Carbon $now = null): bool
+    public function isMultiDay(DateTimeInterface $now): bool
     {
-        $comparisonTime = $this->endTime ?? $now ?? Carbon::now();
-        return ! $this->startTime->isSameDay($comparisonTime);
+        $comparisonTime = $this->endTime ?? $now;
+        return $this->startTime->format('Y-m-d') !== $comparisonTime->format('Y-m-d');
     }
 
     /**
      * logic: isCancellable(): True if duration < 10 mins.
      */
-    public function isCancellable(?Carbon $now = null): bool
+    public function isCancellable(DateTimeInterface $now): bool
     {
-        $comparisonTime = $this->endTime ?? $now ?? Carbon::now();
-        return $this->startTime->diffInMinutes($comparisonTime) < 10;
+        $comparisonTime = $this->endTime ?? $now;
+
+        // Calculate difference in minutes
+        $diff = $this->startTime->diff($comparisonTime);
+        $minutes = ($diff->days * 24 * 60) + ($diff->h * 60) + $diff->i;
+
+        return $minutes < 10;
     }
 
     /**
-     * logic: generateRefinementTimeline(): Generates a list of days between start and end, excluding weekends ( and ), pre-filled with Workplace default hours.
+     * logic: generateRefinementTimeline(): Generates a list of days between start and end, excluding weekends and holidays.
      *
      * @return array<int, array{date: string, start_time: string, end_time: string}>
      */
-    public function generateRefinementTimeline(string $defaultStart, string $defaultEnd, ?Carbon $until = null): array
-    {
-        $timeline = [];
-        $end = $this->endTime ?? $until ?? Carbon::now();
+    public function generateRefinementTimeline(
+        HolidayProvider $holidayProvider,
+        string $defaultStart,
+        string $defaultEnd,
+        ?DateTimeInterface $until = null
+    ): array {
+        $end = $this->endTime ?? $until;
 
-        // Ensure we cover the full range of days.
-        $period = CarbonPeriod::create($this->startTime, '1 day', $end);
+        if ($end === null) {
+            return [];
+        }
+
+        $timeline = [];
+        $start = DateTimeImmutable::createFromInterface($this->startTime)->setTime(0, 0);
+        $endDate = DateTimeImmutable::createFromInterface($end)->setTime(0, 0)->modify('+1 day');
+
+        $interval = new DateInterval('P1D');
+        $period = new DatePeriod($start, $interval, $endDate);
 
         foreach ($period as $date) {
-            /** @var Carbon $date */
-            if ($date->isWeekend()) {
+            /** @var DateTimeInterface $date */
+            // Check weekend (Sat=6, Sun=7)
+            if ($date->format('N') >= 6) {
+                continue;
+            }
+
+            // Check holiday
+            if ($holidayProvider->isHoliday($date)) {
                 continue;
             }
 
@@ -65,12 +90,12 @@ class Delegation
         return $timeline;
     }
 
-    public function getStartTime(): Carbon
+    public function getStartTime(): DateTimeInterface
     {
         return $this->startTime;
     }
 
-    public function getEndTime(): ?Carbon
+    public function getEndTime(): ?DateTimeInterface
     {
         return $this->endTime;
     }
