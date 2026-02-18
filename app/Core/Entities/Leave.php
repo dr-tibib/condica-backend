@@ -10,7 +10,33 @@ use DateTimeInterface;
 
 class Leave
 {
-    public function calculateEndDate(
+    private DateTimeInterface $startDate;
+    private DateTimeInterface $endDate;
+    private ?int $id;
+
+    public function __construct(DateTimeInterface $startDate, DateTimeInterface $endDate, ?int $id = null)
+    {
+        $this->startDate = $startDate;
+        $this->endDate = $endDate;
+        $this->id = $id;
+    }
+
+    public function getStartDate(): DateTimeInterface
+    {
+        return $this->startDate;
+    }
+
+    public function getEndDate(): DateTimeInterface
+    {
+        return $this->endDate;
+    }
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public static function calculateEndDate(
         DateTimeInterface $startDate,
         int $days,
         HolidayProvider $holidayProvider

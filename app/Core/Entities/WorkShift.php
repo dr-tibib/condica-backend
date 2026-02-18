@@ -10,11 +10,13 @@ class WorkShift
 {
     private DateTimeInterface $startTime;
     private ?DateTimeInterface $endTime;
+    private ?int $id;
 
-    public function __construct(DateTimeInterface $startTime, ?DateTimeInterface $endTime = null)
+    public function __construct(DateTimeInterface $startTime, ?DateTimeInterface $endTime = null, ?int $id = null)
     {
         $this->startTime = $startTime;
         $this->endTime = $endTime;
+        $this->id = $id;
     }
 
     /**
@@ -37,5 +39,10 @@ class WorkShift
     public function getEndTime(): ?DateTimeInterface
     {
         return $this->endTime;
+    }
+
+    public function getId(): ?int
+    {
+        return $this->id;
     }
 }
