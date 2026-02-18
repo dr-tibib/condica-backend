@@ -9,4 +9,9 @@ use App\Core\Entities\Vehicle;
 interface IVehicleRepository
 {
     public function findById(int $id): ?Vehicle;
+
+    /**
+     * @return Vehicle[]
+     */
+    public function findAll(): array;
 }
