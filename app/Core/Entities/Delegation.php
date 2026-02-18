@@ -14,11 +14,32 @@ class Delegation
 {
     private DateTimeInterface $startTime;
     private ?DateTimeInterface $endTime;
+    private ?int $id;
+    private ?int $vehicleId;
+    private array $locations;
 
-    public function __construct(DateTimeInterface $startTime, ?DateTimeInterface $endTime = null)
-    {
+    public function __construct(
+        DateTimeInterface $startTime,
+        ?DateTimeInterface $endTime = null,
+        ?int $id = null,
+        ?int $vehicleId = null,
+        array $locations = []
+    ) {
         $this->startTime = $startTime;
         $this->endTime = $endTime;
+        $this->id = $id;
+        $this->vehicleId = $vehicleId;
+        $this->locations = $locations;
+    }
+
+    public function getVehicleId(): ?int
+    {
+        return $this->vehicleId;
+    }
+
+    public function getLocations(): array
+    {
+        return $this->locations;
     }
 
     /**
@@ -98,5 +119,10 @@ class Delegation
     public function getEndTime(): ?DateTimeInterface
     {
         return $this->endTime;
+    }
+
+    public function getId(): ?int
+    {
+        return $this->id;
     }
 }
