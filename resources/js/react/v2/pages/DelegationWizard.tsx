@@ -40,21 +40,20 @@ const DelegationWizard = () => {
       const workplaceId = getKioskWorkplaceId();
       const employeeId = employee.id;
 
-      // Start Delegation for each place
-      // (Execute sequentially to avoid race conditions on check-in if any)
-      for (const place of selectedPlaces) {
-         await axios.post('/api/delegations', {
-            employee_id: employeeId,
-            workplace_id: workplaceId,
-            place_id: place.google_place_id,
-            name: place.name,
-            address: place.address,
-            latitude: place.latitude,
-            longitude: place.longitude,
-            photo_reference: place.photo_reference,
-            vehicle_id: selectedVehicleId
-         });
-      }
+      // Start Delegation with all places in one request
+      await axios.post('/api/delegations', {
+          employee_id: employeeId,
+          workplace_id: workplaceId,
+          places: selectedPlaces.map(p => ({
+              name: p.name,
+              place_id: p.google_place_id,
+              address: p.address,
+              latitude: p.latitude,
+              longitude: p.longitude,
+              photo_reference: p.photo_reference
+          })),
+          vehicle_id: selectedVehicleId
+      });
       
       navigate('/'); 
     } catch (error: any) {
@@ -66,24 +65,26 @@ const DelegationWizard = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-200 dark:bg-slate-900 z-40 overflow-hidden flex items-center justify-center font-sans">
-      {step === 1 && (
-        <StepPlaces 
-            selectedPlaces={selectedPlaces} 
-            onSelectionChange={setSelectedPlaces} 
-            onNext={() => setStep(2)} 
-            onBack={() => navigate('/')} 
-        />
-      )}
-      {step === 2 && (
-        <StepVehicle 
-            selectedPlaces={selectedPlaces} 
-            selectedVehicleId={selectedVehicleId} 
-            onSelectVehicle={setSelectedVehicleId} 
-            onBack={() => setStep(1)} 
-            onStart={handleStart} 
-        />
-      )}
+    <div className="fixed inset-0 bg-slate-200 dark:bg-slate-900 z-40 overflow-y-auto font-sans flex flex-col items-center justify-start md:justify-center p-0 md:p-4">
+      <div className="w-full max-w-5xl min-h-full md:min-h-0 flex items-center justify-center">
+        {step === 1 && (
+          <StepPlaces 
+              selectedPlaces={selectedPlaces} 
+              onSelectionChange={setSelectedPlaces} 
+              onNext={() => setStep(2)} 
+              onBack={() => navigate('/')} 
+          />
+        )}
+        {step === 2 && (
+          <StepVehicle 
+              selectedPlaces={selectedPlaces} 
+              selectedVehicleId={selectedVehicleId} 
+              onSelectVehicle={setSelectedVehicleId} 
+              onBack={() => setStep(1)} 
+              onStart={handleStart} 
+          />
+        )}
+      </div>
       {isLoading && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
             <div className="bg-white p-6 rounded-xl text-xl font-bold">Se procesează...</div>

@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
 
 interface Place {
@@ -12,13 +13,6 @@ interface Place {
   longitude?: number;
   category?: string;
   isNew?: boolean;
-}
-
-interface StepPlacesProps {
-  selectedPlaces: Place[];
-  onSelectionChange: (places: Place[]) => void;
-  onNext: () => void;
-  onBack: () => void;
 }
 
 const KEYBOARD_ROWS = [
@@ -37,10 +31,12 @@ const NUM_ROWS = [
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
-const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }: StepPlacesProps) => {
+function PlaceSelectorContent() {
+  const navigate = useNavigate();
   const placesLibrary = useMapsLibrary('places');
   const [savedPlaces, setSavedPlaces] = useState<Place[]>([]);
   const [googleResults, setGoogleResults] = useState<Place[]>([]);
+  const [selected, setSelected] = useState<Place[]>([]);
   const [searchText, setSearchText] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [focusedCard, setFocusedCard] = useState(0);
@@ -48,6 +44,7 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
   const [shift, setShift] = useState(false);
   const [activeTab, setActiveTab] = useState<"saved" | "results">("saved");
   const [isLoading, setIsLoading] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -128,6 +125,7 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
   const displayPlaces = useMemo(() => {
     if (activeTab === "saved") return savedPlaces;
     
+    // Prioritize saved places first, then google results
     const results = [...matchingSaved];
     googleResults.forEach(gr => {
         if (!results.find(r => r.google_place_id === gr.google_place_id)) {
@@ -139,15 +137,14 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
 
   const toggleSelect = useCallback((place: Place) => {
     if (!place) return;
-    const isSelected = selectedPlaces.find(p => p.google_place_id === place.google_place_id);
-    if (isSelected) {
-        onSelectionChange(selectedPlaces.filter(p => p.google_place_id !== place.google_place_id));
-    } else {
-        onSelectionChange([...selectedPlaces, place]);
-    }
-  }, [selectedPlaces, onSelectionChange]);
+    setSelected(prev =>
+      prev.find(p => p.google_place_id === place.google_place_id)
+        ? prev.filter(p => p.google_place_id !== place.google_place_id)
+        : [...prev, place]
+    );
+  }, []);
 
-  const isSelected = (google_place_id: string) => selectedPlaces.some(p => p.google_place_id === google_place_id);
+  const isSelected = (google_place_id: string) => selected.some(p => p.google_place_id === google_place_id);
 
   const handleKeyPress = (key: string) => {
     if (key === "⌫") {
@@ -189,7 +186,7 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
           setFocusedCard(prev => Math.min(displayPlaces.length - 1, prev + 1));
       }
       if (e.code === "Numpad0") {
-          if (selectedPlaces.length > 0) onNext();
+          if (selected.length > 0) handleConfirm();
       }
       if (e.key === "Escape") {
           setIsSearching(false);
@@ -197,7 +194,11 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [focusedCard, displayPlaces, isSearching, toggleSelect, selectedPlaces, onNext]);
+  }, [focusedCard, displayPlaces, isSearching, toggleSelect, selected]);
+
+  const handleConfirm = () => {
+      setConfirmed(true);
+  };
 
   const getPhotoUrl = (photoRef?: string) => {
       if (!photoRef) return "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&h=200&fit=crop";
@@ -265,7 +266,7 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
           <img
             src={getPhotoUrl(place.photo_reference)}
             alt={place.name}
-            className={`w-full h-full object-cover transition-all duration-300 ${sel ? "brightness-90" : "brightness-75"}`}
+            className={`w-full h-full object-cover transition-all duration-300 ${sel ? "brightness-90" : "brightness-75 group-hover:brightness-90"}`}
             onError={(e) => {
                 (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&h=200&fit=crop";
             }}
@@ -288,20 +289,54 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
     );
   };
 
+  if (confirmed) {
+    return (
+      <div className="w-[1024px] h-[768px] bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center font-sans">
+        <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mb-8 shadow-xl">
+            <span className="material-symbols-outlined text-6xl">check_circle</span>
+        </div>
+        <h1 className="text-slate-800 dark:text-white text-4xl font-black mb-2 uppercase tracking-tight">Delegație Confirmată</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-xl mb-12">
+          {selected.length} locați{selected.length !== 1 ? "i" : "e"} selectat{selected.length !== 1 ? "e" : "ă"}
+        </p>
+        
+        <div className="flex flex-col gap-3 w-full max-w-md mb-12">
+            {selected.map(p => (
+              <div key={p.google_place_id} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 shadow-sm">
+                  <img src={getPhotoUrl(p.photo_reference)} className="w-12 h-12 rounded-lg object-cover" />
+                  <div className="min-w-0">
+                      <div className="font-bold text-slate-800 dark:text-slate-100 truncate">{p.name}</div>
+                      <div className="text-xs text-slate-500 truncate">{p.address}</div>
+                  </div>
+              </div>
+            ))}
+        </div>
+
+        <button
+          onClick={() => { setConfirmed(false); setSelected([]); setSearchText(""); setShowNumpad(false); }}
+          className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-8 py-4 rounded-2xl font-bold hover:bg-slate-300 transition-colors uppercase tracking-widest flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined">refresh</span>
+          Reia Procesul
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-[1024px] h-[768px] bg-slate-50 dark:bg-slate-900 flex flex-col overflow-hidden font-sans relative md:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700">
+    <div className="w-[1024px] h-[768px] bg-slate-50 dark:bg-slate-900 flex flex-col overflow-hidden font-sans relative">
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.2); border-radius: 2px; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
 
       {/* === HEADER === */}
       <header className="h-20 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center px-8 gap-6 shrink-0 z-20 shadow-sm">
-        <div className="flex items-center gap-3 mr-4 cursor-pointer" onClick={onBack}>
+        <div className="flex items-center gap-3 mr-4 cursor-pointer" onClick={() => navigate('/')}>
           <div className="w-12 h-12 bg-primary text-white rounded-xl flex items-center justify-center text-2xl shadow-lg shadow-primary/20">
             <span className="material-symbols-outlined">location_on</span>
           </div>
@@ -340,22 +375,22 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
 
         <div className="flex items-center gap-4 bg-slate-100 dark:bg-slate-700/50 px-5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-600">
            <div className="text-right">
-              <div className="text-primary text-2xl font-black leading-none">{selectedPlaces.length}</div>
+              <div className="text-primary text-2xl font-black leading-none">{selected.length}</div>
               <div className="text-slate-400 text-[9px] font-bold tracking-widest uppercase">Selectate</div>
            </div>
            <span className="material-symbols-outlined text-slate-300">push_pin</span>
         </div>
 
         <button
-          onClick={() => selectedPlaces.length && onNext()}
-          disabled={!selectedPlaces.length}
+          onClick={() => selected.length && handleConfirm()}
+          disabled={!selected.length}
           className={`h-14 px-8 rounded-2xl font-black text-lg transition-all shadow-xl flex items-center gap-3 uppercase tracking-tight ${
-              selectedPlaces.length 
+              selected.length 
               ? "bg-green-600 text-white shadow-green-500/20 hover:bg-green-700 active:scale-[0.98]" 
               : "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed"
           }`}
         >
-          Spre Vehicul
+          Confirmă
           <span className="material-symbols-outlined">arrow_forward</span>
         </button>
       </header>
@@ -399,9 +434,9 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
               </div>
           )}
 
-          {selectedPlaces.length > 0 && (
+          {selected.length > 0 && (
             <button
-              onClick={() => onSelectionChange([])}
+              onClick={() => setSelected([])}
               className="text-red-500 text-[10px] font-bold tracking-widest uppercase hover:underline flex items-center gap-1"
             >
               <span className="material-symbols-outlined text-sm">delete_sweep</span>
@@ -443,11 +478,11 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
         </div>
 
         {/* Selected Tray */}
-        {selectedPlaces.length > 0 && (
+        {selected.length > 0 && (
           <div className="h-20 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex items-center px-8 gap-4 overflow-x-auto shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Locații Selectate:</span>
             <div className="flex items-center gap-3">
-                {selectedPlaces.map(p => (
+                {selected.map(p => (
                   <div key={p.google_place_id} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 border border-primary/30 rounded-full pl-1.5 pr-3 py-1.5 shrink-0 transition-all hover:border-primary">
                     <img src={getPhotoUrl(p.photo_reference)} className="w-7 h-7 rounded-full object-cover shadow-sm" />
                     <span className="text-xs font-bold text-primary truncate max-w-[120px]">{p.name}</span>
@@ -474,6 +509,7 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
                   <div key={ri} className="flex gap-2 justify-center mb-2">
                       {row.map((k) => {
                         const isWide = k === "SPACE";
+                        const isMed = k === "⌫" || k === "⇧" || k === "✓" || k === "123";
                         return (
                           <button
                             key={k}
@@ -553,14 +589,12 @@ const StepPlacesContent = ({ selectedPlaces, onSelectionChange, onNext, onBack }
       )}
     </div>
   );
-};
+}
 
-const StepPlaces = (props: StepPlacesProps) => {
+export default function DelegationPlaceSelectorTest() {
     return (
         <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['places']}>
-            <StepPlacesContent {...props} />
+            <PlaceSelectorContent />
         </APIProvider>
     );
-};
-
-export default StepPlaces;
+}
