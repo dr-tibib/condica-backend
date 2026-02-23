@@ -33,8 +33,8 @@ const CodeInput = ({ value, onChange, onSubmit, isLoading }: CodeInputProps) => 
   }, [value, onSubmit, onChange]);
 
   return (
-    <section className="flex items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-      <label className="text-3xl font-bold text-slate-700 dark:text-slate-300 px-4">Cod:</label>
+    <section className="flex items-center gap-2 md:gap-4 bg-white dark:bg-slate-800 p-2 md:p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+      <label className="text-lg md:text-3xl font-bold text-slate-700 dark:text-slate-300 px-1 md:px-4">Cod:</label>
       <input 
         ref={inputRef}
         value={value}
@@ -43,18 +43,19 @@ const CodeInput = ({ value, onChange, onSubmit, isLoading }: CodeInputProps) => 
             const val = e.target.value.replace(/[^0-9]/g, '');
             onChange(val);
         }}
-        className="flex-grow text-4xl p-4 border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-900 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all outline-none font-mono" 
+        className="flex-grow min-w-0 text-xl md:text-4xl p-2.5 md:p-4 border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-900 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all outline-none font-mono" 
         placeholder="" 
         type="text" // Visible characters as requested
         autoFocus
         maxLength={10}
+        inputMode="numeric"
       />
       <button 
         onClick={onSubmit}
         disabled={isLoading || value.length === 0}
-        className="bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-3xl font-bold py-4 px-12 rounded-xl transition-colors shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-lg md:text-3xl font-bold py-2.5 md:py-4 px-4 md:px-12 rounded-xl transition-colors shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
       >
-        {isLoading ? '...' : 'Validare'}
+        {isLoading ? '...' : 'OK'}
       </button>
     </section>
   );

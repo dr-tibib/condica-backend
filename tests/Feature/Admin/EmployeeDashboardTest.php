@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\User;
+use App\Models\Employee;
 use App\Models\PresenceEvent;
 use App\Models\LeaveRequest;
 use App\Models\PublicHoliday;
@@ -15,11 +16,7 @@ class EmployeeDashboardTest extends TenantTestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        // Fix for Backpack guard issue in tests
         config(['backpack.base.guard' => 'web']);
-
-        // Required for leave requests
         if (LeaveType::count() == 0) {
              LeaveType::create(['name' => 'Annual', 'total_days' => 20]);
         }
@@ -27,37 +24,31 @@ class EmployeeDashboardTest extends TenantTestCase
 
     public function test_dashboard_loads_with_correct_data()
     {
-        // 1. Create User
         $user = User::factory()->create();
-        $employee = \App\Models\Employee::factory()->create(['user_id' => $user->id]);
+        $employee = Employee::factory()->create(['user_id' => $user->id]);
 
-        // 2. Setup Data
-        // Assume today is Wednesday 15th (middle of month)
         Carbon::setTestNow(Carbon::parse('2023-11-15 12:00:00'));
 
-        // Check in/out for previous days
-        // Day 1: 8h
-        $checkIn = PresenceEvent::factory()->create([
+        // Completed day: 8h
+        PresenceEvent::create([
             'employee_id' => $employee->id,
-            'event_type' => 'check_in',
-            'event_time' => Carbon::parse('2023-11-01 09:00:00'),
-        ]);
-        PresenceEvent::factory()->create([
-            'employee_id' => $employee->id,
-            'event_type' => 'check_out',
-            'event_time' => Carbon::parse('2023-11-01 17:00:00'),
-            'pair_event_id' => $checkIn->id,
+            'workplace_id' => 1,
+            'type' => 'presence',
+            'start_at' => Carbon::parse('2023-11-01 09:00:00'),
+            'end_at' => Carbon::parse('2023-11-01 17:00:00'),
+            'start_method' => 'manual',
+            'end_method' => 'manual',
         ]);
 
-        // - Missing Clock Out (Alert)
-        // Yesterday check-in without check-out
-        PresenceEvent::factory()->create([
+        // Missing Clock Out (Alert)
+        PresenceEvent::create([
             'employee_id' => $employee->id,
-            'event_type' => 'check_in',
-            'event_time' => Carbon::parse('2023-11-14 09:00:00'),
+            'workplace_id' => 1,
+            'type' => 'presence',
+            'start_at' => Carbon::parse('2023-11-14 09:00:00'),
+            'start_method' => 'manual',
         ]);
 
-        // - Rejected Leave (Alert)
         $leaveType = LeaveType::first();
         LeaveRequest::create([
             'employee_id' => $employee->id,
@@ -69,7 +60,6 @@ class EmployeeDashboardTest extends TenantTestCase
             'updated_at' => Carbon::now(),
         ]);
 
-        // - Upcoming Leave
         LeaveRequest::create([
             'employee_id' => $employee->id,
             'leave_type_id' => $leaveType->id,
@@ -79,29 +69,22 @@ class EmployeeDashboardTest extends TenantTestCase
             'status' => 'APPROVED',
         ]);
 
-        // - Upcoming Holiday
         PublicHoliday::create([
             'date' => Carbon::parse('2023-11-30'),
             'description' => 'St. Andrew',
         ]);
 
-        // 3. Authenticate and Visit
         $response = $this->actingAs($user)
             ->get(route('backpack.dashboard'));
 
-        // 4. Assertions
         $response->assertStatus(200);
         $response->assertViewIs('admin.dashboard.employee');
 
-        // Assert View Data
         $metrics = $response->viewData('metrics');
-        $this->assertEquals(8.0, $metrics['logged_hours']); // Only 1 completed day (8h)
+        $this->assertEquals(8.0, $metrics['logged_hours']);
 
-        // Assert Alerts
         $response->assertSee('Missing clock-out on Nov 14th');
         $response->assertSee('Request Rejected');
-
-        // Assert Upcoming
         $response->assertSee('Next Leave (Approved)');
         $response->assertSee('Nov 20');
         $response->assertSee('St. Andrew');

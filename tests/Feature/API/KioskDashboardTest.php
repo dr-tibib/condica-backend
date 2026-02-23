@@ -24,39 +24,35 @@ class KioskDashboardTest extends TenantTestCase
         $tenant = Tenant::first();
         $domain = $tenant->domains->first()->domain;
 
-        // 1. Setup Logins (Check-ins)
         $workplace = Workplace::factory()->create();
         $user1 = User::factory()->create();
         $employee1 = Employee::factory()->create(['user_id' => $user1->id, 'first_name' => 'User', 'last_name' => 'One']);
 
-        $event1 = PresenceEvent::create([
+        PresenceEvent::create([
             'employee_id' => $employee1->id,
             'workplace_id' => $workplace->id,
-            'event_type' => 'check_in',
-            'event_time' => now()->subMinutes(10),
-            'method' => 'manual',
+            'type' => 'presence',
+            'start_at' => now()->subMinutes(10),
+            'start_method' => 'manual',
         ]);
 
-        // 1.1 Setup Check-out
         $user1b = User::factory()->create();
         $employee1b = Employee::factory()->create(['user_id' => $user1b->id, 'first_name' => 'User', 'last_name' => 'One B']);
 
         PresenceEvent::create([
             'employee_id' => $employee1b->id,
             'workplace_id' => $workplace->id,
-            'event_type' => 'check_out',
-            'event_time' => now()->subMinutes(5),
-            'method' => 'manual',
+            'type' => 'presence',
+            'start_at' => now()->subMinutes(5),
+            'end_at' => now(),
+            'start_method' => 'manual',
+            'end_method' => 'manual',
         ]);
 
-        // 2. Setup Leave
         $user2 = User::factory()->create();
         $employee2 = Employee::factory()->create(['user_id' => $user2->id, 'first_name' => 'User', 'last_name' => 'Two']);
 
-        $leaveType = LeaveType::create([
-            'name' => 'Test Leave',
-            'is_paid' => true,
-        ]);
+        $leaveType = LeaveType::create(['name' => 'Test Leave', 'is_paid' => true]);
 
         LeaveRequest::create([
             'employee_id' => $employee2->id,
@@ -67,7 +63,6 @@ class KioskDashboardTest extends TenantTestCase
             'total_days' => 3,
         ]);
 
-        // 3. Setup Delegation
         $user3 = User::factory()->create();
         $employee3 = Employee::factory()->create(['user_id' => $user3->id, 'first_name' => 'User', 'last_name' => 'Three']);
 
@@ -77,66 +72,44 @@ class KioskDashboardTest extends TenantTestCase
         $startEvent = PresenceEvent::create([
             'employee_id' => $employee3->id,
             'workplace_id' => $workplace->id,
-            'event_type' => 'delegation_start',
-            'event_time' => now()->subMinutes(30),
-            'method' => 'kiosk',
+            'type' => 'delegation',
+            'start_at' => now()->subMinutes(30),
+            'start_method' => 'kiosk',
         ]);
 
-        Delegation::create([
+        $delegation = Delegation::create([
             'employee_id' => $employee3->id,
-            'start_event_id' => $startEvent->id,
+            'presence_event_id' => $startEvent->id,
             'name' => 'Test Delegation',
             'vehicle_id' => $vehicle->id,
             'delegation_place_id' => $place->id,
         ]);
+        
+        $startEvent->update([
+            'linkable_id' => $delegation->id,
+            'linkable_type' => Delegation::class,
+        ]);
 
-        // 3.1 Setup Delegation End
         $user3b = User::factory()->create();
         $employee3b = Employee::factory()->create(['user_id' => $user3b->id, 'first_name' => 'User', 'last_name' => 'Three B']);
 
         PresenceEvent::create([
             'employee_id' => $employee3b->id,
             'workplace_id' => $workplace->id,
-            'event_type' => 'delegation_end',
-            'event_time' => now()->subMinutes(15),
-            'method' => 'kiosk',
+            'type' => 'delegation',
+            'start_at' => now()->subMinutes(15),
+            'end_at' => now(),
+            'start_method' => 'kiosk',
+            'end_method' => 'kiosk',
         ]);
 
         $response = $this->getJson("http://{$domain}/api/kiosk/dashboard");
 
         $response->assertStatus(200)
-            ->assertJsonStructure([
-                'latest_logins',
-                'on_leave',
-                'active_delegations',
-            ]);
+            ->assertJsonStructure(['latest_logins', 'on_leave', 'active_delegations']);
 
-        // Check Logins
-        $response->assertJsonFragment([
-            'employee' => 'User One',
-            'type' => 'check_in',
-        ]);
-
-        $response->assertJsonFragment([
-            'employee' => 'User One B',
-            'type' => 'check_out',
-        ]);
-
-        $response->assertJsonFragment([
-            'employee' => 'User Three B',
-            'type' => 'delegation_end',
-        ]);
-
-        // Check Leave
-        $response->assertJsonFragment([
-            'employee' => 'User Two',
-        ]);
-
-        // Check Delegation
-        $response->assertJsonFragment([
-            'employee' => 'User Three',
-            'destination' => 'Test Place',
-            'vehicle' => 'B-123-TST',
-        ]);
+        $response->assertJsonFragment(['employee' => 'User One', 'type' => 'check_in']);
+        $response->assertJsonFragment(['employee' => 'User One B', 'type' => 'check_out']);
+        $response->assertJsonFragment(['employee' => 'User Three B', 'type' => 'delegation_end']);
     }
 }

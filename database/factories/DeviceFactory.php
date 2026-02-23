@@ -17,7 +17,7 @@ class DeviceFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => \App\Models\User::factory(),
+            'employee_id' => \App\Models\Employee::factory(),
             'device_token' => fake()->unique()->uuid(),
             'device_name' => fake()->randomElement([
                 'iPhone 14 Pro',

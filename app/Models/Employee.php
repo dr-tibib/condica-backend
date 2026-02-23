@@ -14,6 +14,8 @@ class Employee extends Model
 {
     use CrudTrait, HasFactory, LogsActivity;
 
+    protected $appends = ['name', 'avatar_url'];
+
     protected $fillable = [
         'first_name',
         'last_name',
@@ -103,57 +105,43 @@ class Employee extends Model
         return $this->hasMany(Device::class);
     }
 
-    // --- Methods moved from User ---
+    // --- Methods updated for Refactored PresenceEvent ---
 
     /**
      * Get the latest presence event for this employee.
      */
     public function latestPresenceEvent(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
-        return $this->hasOne(PresenceEvent::class)->latestOfMany('event_time');
+        return $this->hasOne(PresenceEvent::class)->latestOfMany('start_at');
     }
 
     /**
-     * Get the latest presence event for this employee.
+     * Get the latest presence event for this employee (including check-in/out logic).
      */
     public function latestCheckinCheckoutPresenceEvent(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(PresenceEvent::class)
-            ->ofMany([
-                'event_time' => 'max'
-            ], function (Builder $query) {
-                $query->whereIn('event_type', ['check_in', 'check_out']);
-            });
+            ->where('type', 'presence')
+            ->latestOfMany('start_at');
     }
 
     /**
-     * Get the latest check-in event for this employee.
+     * Get the latest check-in (active or completed).
      */
     public function latestCheckIn(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
-        return $this->hasOne(PresenceEvent::class)
-            ->whereIn('event_type', ['check_in', 'delegation_start'])
-            ->latestOfMany('event_time');
+        return $this->latestCheckinCheckoutPresenceEvent();
     }
 
     /**
-     * Get the latest check-out event for this employee.
-     */
-    public function latestCheckOut(): \Illuminate\Database\Eloquent\Relations\HasOne
-    {
-        return $this->hasOne(PresenceEvent::class)
-            ->whereIn('event_type', ['check_out', 'delegation_end'])
-            ->latestOfMany('event_time');
-    }
-
-    /**
-     * Check if the employee is currently present (last event was a check-in).
+     * Check if the employee is currently present (has an active presence event).
      */
     public function isCurrentlyPresent(): bool
     {
-        $latestEvent = $this->latestCheckinCheckoutPresenceEvent;
-
-        return $latestEvent && in_array($latestEvent->event_type, ['check_in']);
+        return $this->presenceEvents()
+            ->where('type', 'presence')
+            ->active()
+            ->exists();
     }
 
     /**
@@ -161,11 +149,13 @@ class Employee extends Model
      */
     public function getCurrentWorkplace(): ?Workplace
     {
-        if (! $this->isCurrentlyPresent()) {
-            return null;
-        }
+        $activePresence = $this->presenceEvents()
+            ->where('type', 'presence')
+            ->active()
+            ->latest('start_at')
+            ->first();
 
-        return $this->latestCheckinCheckoutPresenceEvent->workplace;
+        return $activePresence ? $activePresence->workplace : null;
     }
 
     /**
@@ -174,8 +164,7 @@ class Employee extends Model
     public function getTodayMinutes(): int
     {
         $events = $this->presenceEvents()
-            ->whereDate('event_time', today())
-            ->orderBy('event_time')
+            ->whereDate('start_at', today())
             ->get();
 
         return $this->calculateMinutesFromEvents($events);
@@ -187,11 +176,10 @@ class Employee extends Model
     public function getWeekMinutes(): int
     {
         $events = $this->presenceEvents()
-            ->whereBetween('event_time', [
+            ->whereBetween('start_at', [
                 now()->startOfWeek(),
                 now()->endOfWeek(),
             ])
-            ->orderBy('event_time')
             ->get();
 
         return $this->calculateMinutesFromEvents($events);
@@ -205,14 +193,12 @@ class Employee extends Model
     private function calculateMinutesFromEvents(\Illuminate\Support\Collection $events): int
     {
         $totalMinutes = 0;
-        $currentCheckIn = null;
 
         foreach ($events as $event) {
-            if ($event->isCheckIn()) {
-                $currentCheckIn = $event;
-            } elseif ($event->isCheckOut() && $currentCheckIn !== null) {
-                $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes($event->event_time);
-                $currentCheckIn = null;
+            if ($event->end_at) {
+                $totalMinutes += (int) $event->start_at->diffInMinutes($event->end_at);
+            } elseif ($event->start_at->isToday()) {
+                $totalMinutes += (int) $event->start_at->diffInMinutes(now());
             }
         }
 
@@ -233,8 +219,6 @@ class Employee extends Model
     public function getAvatarUrlAttribute()
     {
         if ($this->avatar) {
-            // Assuming Backpack stores the path relative to storage disk
-            // You might need Storage::url() here if using public disk
             return $this->avatar;
         }
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->first_name . ' ' . $this->last_name) . '&color=7F9CF5&background=EBF4FF';

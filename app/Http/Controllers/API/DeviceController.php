@@ -26,7 +26,7 @@ class DeviceController extends Controller
 
         $device = Device::updateOrCreate(
             [
-                'user_id' => $request->user()->id,
+                'employee_id' => $request->user()->employee->id,
                 'device_token' => $validated['device_token'],
             ],
             [

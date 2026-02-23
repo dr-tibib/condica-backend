@@ -7,6 +7,7 @@ use Database\Seeders\Tenant\LeavePermissionSeeder;
 use Database\Seeders\Tenant\LeaveManagementSeeder;
 use Database\Seeders\Tenant\KioskAdminRoleSeeder;
 use Database\Seeders\Tenant\TenantSettingsSeeder;
+use Database\Seeders\Tenant\DemoEmployeePresenceSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -35,11 +36,14 @@ class DatabaseSeeder extends Seeder
             LeaveManagementSeeder::class,
             KioskAdminRoleSeeder::class,
             TenantSettingsSeeder::class,
+            // DemoEmployeePresenceSeeder::class,
         ]);
     }
 
     private function runCentralSeeders(): void
     {
-        // Central seeders will be empty for now
+        $this->call([
+            CentralDatabaseSeeder::class,
+        ]);
     }
 }

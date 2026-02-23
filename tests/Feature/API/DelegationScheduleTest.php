@@ -35,7 +35,6 @@ class DelegationScheduleTest extends TenantTestCase
             'is_active' => true,
         ]);
 
-        // Ensure settings are seeded or set
         Setting::unguard();
         Setting::updateOrCreate(['key' => 'shift_start'], [
             'value' => '09:00',
@@ -54,30 +53,29 @@ class DelegationScheduleTest extends TenantTestCase
 
     public function test_long_delegation_requires_schedule()
     {
-        $startDate = now()->subDays(2)->setHour(10)->setMinute(0); // 2 days ago at 10:00
+        $startDate = now()->subDays(2)->setHour(10)->setMinute(0);
 
-        // Create initial check-in and delegation
-        $checkIn = PresenceEvent::create([
+        PresenceEvent::create([
             'employee_id' => $this->employee->id,
             'workplace_id' => $this->workplace->id,
-            'event_type' => 'check_in',
-            'event_time' => $startDate->copy()->subMinute(),
-            'method' => 'kiosk',
+            'type' => 'presence',
+            'start_at' => $startDate->copy()->subMinute(),
+            'start_method' => 'kiosk',
         ]);
 
-        $delegationStart = PresenceEvent::create([
+        $delegationEvent = PresenceEvent::create([
             'employee_id' => $this->employee->id,
             'workplace_id' => $this->workplace->id,
-            'event_type' => 'delegation_start',
-            'event_time' => $startDate,
-            'method' => 'kiosk',
+            'type' => 'delegation',
+            'start_at' => $startDate,
+            'start_method' => 'kiosk',
             'notes' => 'Long Delegation',
         ]);
 
         Delegation::create([
              'employee_id' => $this->employee->id,
              'name' => 'Far Away',
-             'start_event_id' => $delegationStart->id,
+             'presence_event_id' => $delegationEvent->id,
         ]);
 
         $domain = $this->tenant->domains->first()->domain;
@@ -93,7 +91,7 @@ class DelegationScheduleTest extends TenantTestCase
         $response->assertJson(['type' => 'delegation_end_schedule_required']);
 
         $data = $response->json();
-        $this->assertCount(3, $data['schedule_days']); // Day 1, Day 2, Day 3 (Today)
+        $this->assertCount(3, $data['schedule_days']);
         $this->assertEquals($startDate->format('Y-m-d'), $data['schedule_days'][0]['date']);
         $this->assertEquals(now()->format('Y-m-d'), $data['schedule_days'][2]['date']);
 
@@ -102,30 +100,29 @@ class DelegationScheduleTest extends TenantTestCase
 
     public function test_end_delegation_with_schedule()
     {
-        $startDate = now()->subDays(2)->setHour(10)->setMinute(0); // 2 days ago
-        $endDate = now()->setHour(14)->setMinute(0); // Today
+        $startDate = now()->subDays(2)->setHour(10)->setMinute(0);
+        $endDate = now()->setHour(14)->setMinute(0);
 
-        // Create delegation
         $checkIn = PresenceEvent::create([
             'employee_id' => $this->employee->id,
             'workplace_id' => $this->workplace->id,
-            'event_type' => 'check_in',
-            'event_time' => $startDate->copy()->subMinute(),
-            'method' => 'kiosk',
+            'type' => 'presence',
+            'start_at' => $startDate->copy()->subMinute(),
+            'start_method' => 'kiosk',
         ]);
 
-        $delegationStart = PresenceEvent::create([
+        $delegationEvent = PresenceEvent::create([
             'employee_id' => $this->employee->id,
             'workplace_id' => $this->workplace->id,
-            'event_type' => 'delegation_start',
-            'event_time' => $startDate,
-            'method' => 'kiosk',
+            'type' => 'delegation',
+            'start_at' => $startDate,
+            'start_method' => 'kiosk',
         ]);
 
         Delegation::create([
              'employee_id' => $this->employee->id,
              'name' => 'Far Away',
-             'start_event_id' => $delegationStart->id,
+             'presence_event_id' => $delegationEvent->id,
         ]);
 
         $schedule = [
@@ -157,41 +154,39 @@ class DelegationScheduleTest extends TenantTestCase
 
         $response->assertStatus(200);
 
-        // Verify Day 1
         $day1End = PresenceEvent::where('employee_id', $this->employee->id)
-            ->where('event_type', 'delegation_end')
-            ->whereDate('event_time', $startDate)
+            ->where('type', 'delegation')
+            ->whereDate('start_at', $startDate)
             ->first();
         $this->assertNotNull($day1End);
-        $this->assertEquals('18:00:00', $day1End->event_time->format('H:i:s'));
+        $this->assertEquals('18:00:00', $day1End->end_at->format('H:i:s'));
 
-        $day1CheckOut = PresenceEvent::where('employee_id', $this->employee->id)
-            ->where('event_type', 'check_out')
-            ->whereDate('event_time', $startDate)
+        $day1Presence = PresenceEvent::where('employee_id', $this->employee->id)
+            ->where('type', 'presence')
+            ->whereDate('start_at', $startDate)
             ->first();
-        $this->assertNotNull($day1CheckOut);
+        $this->assertNotNull($day1Presence);
+        $this->assertNotNull($day1Presence->end_at);
 
-        // Verify Day 2
-        $day2Start = PresenceEvent::where('employee_id', $this->employee->id)
-            ->where('event_type', 'delegation_start')
-            ->whereDate('event_time', $startDate->copy()->addDay())
+        $day2Delegation = PresenceEvent::where('employee_id', $this->employee->id)
+            ->where('type', 'delegation')
+            ->whereDate('start_at', $startDate->copy()->addDay())
             ->first();
-        $this->assertNotNull($day2Start);
-        $this->assertEquals('09:00:00', $day2Start->event_time->format('H:i:s'));
+        $this->assertNotNull($day2Delegation);
+        $this->assertEquals('09:00:00', $day2Delegation->start_at->format('H:i:s'));
 
-        // Verify Day 3 (Last Day)
-        $day3End = PresenceEvent::where('employee_id', $this->employee->id)
-            ->where('event_type', 'delegation_end')
-            ->whereDate('event_time', $endDate)
+        $day3Delegation = PresenceEvent::where('employee_id', $this->employee->id)
+            ->where('type', 'delegation')
+            ->whereDate('start_at', $endDate)
             ->first();
-        $this->assertNotNull($day3End);
-        $this->assertEquals('14:00:00', $day3End->event_time->format('H:i:s'));
+        $this->assertNotNull($day3Delegation);
+        $this->assertEquals('14:00:00', $day3Delegation->end_at->format('H:i:s'));
 
-        // Ensure NO checkout on Day 3
-        $day3CheckOut = PresenceEvent::where('employee_id', $this->employee->id)
-            ->where('event_type', 'check_out')
-            ->whereDate('event_time', $endDate)
+        $day3Presence = PresenceEvent::where('employee_id', $this->employee->id)
+            ->where('type', 'presence')
+            ->whereDate('start_at', $endDate)
             ->first();
-        $this->assertNull($day3CheckOut);
+        $this->assertNotNull($day3Presence);
+        $this->assertNull($day3Presence->end_at);
     }
 }

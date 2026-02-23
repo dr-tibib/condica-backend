@@ -29,9 +29,10 @@ const PresenceModal = ({ isOpen, onClose }: PresenceModalProps) => {
         setIsLoading(true);
         try {
             const response = await axios.get('/api/kiosk/employees/status');
-            setEmployees(response.data.data);
+            setEmployees(response.data.data || []);
         } catch (error) {
             console.error('Failed to fetch employee status', error);
+            setEmployees([]);
         } finally {
             setIsLoading(false);
         }
@@ -59,25 +60,25 @@ const PresenceModal = ({ isOpen, onClose }: PresenceModalProps) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-opacity duration-300">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-6xl h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700 transition-transform duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-0 md:p-4 transition-opacity duration-300">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-6xl h-full md:h-[85vh] md:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700 transition-transform duration-300">
 
                 {/* Header */}
-                <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 z-10">
-                    <h2 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
-                        <span className="material-symbols-outlined text-4xl text-primary">groups</span>
-                        Status Prezență Angajați
+                <div className="p-4 md:p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 z-10">
+                    <h2 className="text-xl md:text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-2 md:gap-3">
+                        <span className="material-symbols-outlined text-3xl md:text-4xl text-primary">groups</span>
+                        Status Prezență
                     </h2>
                     <button
                         onClick={onClose}
                         className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 dark:text-slate-400"
                     >
-                        <span className="material-symbols-outlined text-3xl">close</span>
+                        <span className="material-symbols-outlined text-2xl md:text-3xl">close</span>
                     </button>
                 </div>
 
                 {/* Search & Stats */}
-                <div className="p-6 pb-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-4 md:p-6 pb-2 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div className="relative">
                         <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
                         <input
@@ -85,26 +86,26 @@ const PresenceModal = ({ isOpen, onClose }: PresenceModalProps) => {
                             placeholder="Caută angajat..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-slate-400"
+                            className="w-full pl-12 pr-4 py-3 md:py-4 rounded-xl bg-slate-100 dark:bg-slate-800 border-none text-base md:text-lg text-slate-800 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-slate-400"
                             autoFocus
                         />
                     </div>
-                    <div className="flex gap-3 overflow-x-auto pb-2 scroll-hide">
-                         <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg whitespace-nowrap">
-                            <span className="material-symbols-outlined text-green-500">check_circle</span>
-                            <span className="font-bold text-green-700 dark:text-green-300">
+                    <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 scroll-hide">
+                         <div className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-green-50 dark:bg-green-900/20 rounded-lg whitespace-nowrap">
+                            <span className="material-symbols-outlined text-green-500 text-lg md:text-2xl">check_circle</span>
+                            <span className="font-bold text-green-700 dark:text-green-300 text-xs md:text-sm">
                                 {employees.filter(e => e.status === 'present').length} Prezenți
                             </span>
                          </div>
-                         <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg whitespace-nowrap">
-                            <span className="material-symbols-outlined text-blue-500">flight</span>
-                            <span className="font-bold text-blue-700 dark:text-blue-300">
+                         <div className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg whitespace-nowrap">
+                            <span className="material-symbols-outlined text-blue-500 text-lg md:text-2xl">flight</span>
+                            <span className="font-bold text-blue-700 dark:text-blue-300 text-xs md:text-sm">
                                 {employees.filter(e => e.status === 'delegation').length} Delegație
                             </span>
                          </div>
-                         <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg whitespace-nowrap">
-                            <span className="material-symbols-outlined text-purple-500">beach_access</span>
-                            <span className="font-bold text-purple-700 dark:text-purple-300">
+                         <div className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg whitespace-nowrap">
+                            <span className="material-symbols-outlined text-purple-500 text-lg md:text-2xl">beach_access</span>
+                            <span className="font-bold text-purple-700 dark:text-purple-300 text-xs md:text-sm">
                                 {employees.filter(e => e.status === 'leave').length} Concediu
                             </span>
                          </div>
@@ -112,39 +113,39 @@ const PresenceModal = ({ isOpen, onClose }: PresenceModalProps) => {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6 pt-2">
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 pt-2">
                     {isLoading ? (
                         <div className="flex justify-center items-center h-full">
-                            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
+                            <div className="animate-spin rounded-full h-12 w-12 md:h-16 md:w-16 border-t-4 border-b-4 border-primary"></div>
                         </div>
                     ) : filteredEmployees.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
                             {filteredEmployees.map((employee) => {
                                 const { icon, color, bg } = getStatusConfig(employee.status);
                                 return (
-                                    <div key={employee.id} className={`flex items-center gap-4 p-4 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all ${bg}`}>
+                                    <div key={employee.id} className={`flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all ${bg}`}>
                                         <div className="relative shrink-0">
                                             <img
                                                 src={employee.avatar}
                                                 alt={employee.name}
-                                                className="w-16 h-16 rounded-full object-cover shadow-sm bg-white"
+                                                className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover shadow-sm bg-white"
                                                 onError={(e) => {
                                                     (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name)}&background=random`;
                                                 }}
                                             />
-                                            <div className={`absolute -bottom-1 -right-1 bg-white dark:bg-slate-900 rounded-full p-1`}>
-                                                <span className={`material-symbols-outlined ${color} text-xl block`}>{icon}</span>
+                                            <div className={`absolute -bottom-1 -right-1 bg-white dark:bg-slate-900 rounded-full p-0.5 md:p-1`}>
+                                                <span className={`material-symbols-outlined ${color} text-base md:text-xl block`}>{icon}</span>
                                             </div>
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <h3 className="font-bold text-lg text-slate-800 dark:text-white truncate">{employee.name}</h3>
-                                            <p className={`text-sm font-bold truncate ${color} uppercase tracking-wide`}>
+                                            <h3 className="font-bold text-base md:text-lg text-slate-800 dark:text-white truncate">{employee.name}</h3>
+                                            <p className={`text-[10px] md:text-sm font-bold truncate ${color} uppercase tracking-wide`}>
                                                 {employee.status === 'present' ? 'Prezent' :
                                                  employee.status === 'leave' ? 'În Concediu' :
                                                  employee.status === 'delegation' ? 'În Delegație' : 'Absent'}
                                             </p>
                                             {employee.details && (
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-1 font-medium">
+                                                <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 md:mt-1 font-medium">
                                                     {employee.details}
                                                 </p>
                                             )}
@@ -155,8 +156,8 @@ const PresenceModal = ({ isOpen, onClose }: PresenceModalProps) => {
                         </div>
                     ) : (
                         <div className="flex flex-col justify-center items-center h-full text-slate-400">
-                            <span className="material-symbols-outlined text-6xl mb-4 block opacity-50">search_off</span>
-                            <p className="text-xl">Nu am găsit angajați.</p>
+                            <span className="material-symbols-outlined text-4xl md:text-6xl mb-2 md:mb-4 block opacity-50">search_off</span>
+                            <p className="text-lg">Nu am găsit angajați.</p>
                         </div>
                     )}
                 </div>

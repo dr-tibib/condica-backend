@@ -16,7 +16,6 @@
     <script>
         <?php $tenant = [
             'company_name' => isset($tenant) ? $tenant->company_name : null,
-            'kiosk_version' => config('kiosk.version', env('KIOSK_VERSION', 'v2')),
         ]; ?>
         window.tenant = @json($tenant);
     </script>

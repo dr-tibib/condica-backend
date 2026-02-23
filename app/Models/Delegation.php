@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class Delegation extends Model
 {
@@ -16,13 +17,12 @@ class Delegation extends Model
 
     protected $fillable = [
         'employee_id',
+        'presence_event_id',
         'place_id',
         'name',
         'address',
         'latitude',
         'longitude',
-        'start_event_id',
-        'end_event_id',
         'vehicle_id',
         'delegation_place_id',
     ];
@@ -37,14 +37,20 @@ class Delegation extends Model
         return $this->belongsTo(Employee::class);
     }
 
-    public function startEvent(): BelongsTo
+    /**
+     * Get the presence event that started/contains this delegation.
+     */
+    public function presenceEvent(): BelongsTo
     {
-        return $this->belongsTo(PresenceEvent::class, 'start_event_id');
+        return $this->belongsTo(PresenceEvent::class);
     }
 
-    public function endEvent(): BelongsTo
+    /**
+     * Reciprocal link back to the presence event as a linkable.
+     */
+    public function eventLink(): MorphOne
     {
-        return $this->belongsTo(PresenceEvent::class, 'end_event_id');
+        return $this->morphOne(PresenceEvent::class, 'linkable');
     }
 
     public function vehicle(): BelongsTo
@@ -55,5 +61,65 @@ class Delegation extends Model
     public function delegationPlace(): BelongsTo
     {
         return $this->belongsTo(DelegationPlace::class);
+    }
+
+    public function stops(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DelegationStop::class);
+    }
+
+    /**
+     * logic: isMultiDay(): True if start_date and end_date differ.
+     */
+    public function isMultiDay(?\Carbon\Carbon $now = null): bool
+    {
+        $start = $this->presenceEvent?->start_at;
+        if (!$start) return false;
+        
+        $end = $this->presenceEvent?->end_at ?? $now ?? \Carbon\Carbon::now();
+        return ! $start->isSameDay($end);
+    }
+
+    /**
+     * logic: isCancellable(): True if duration < 10 mins.
+     */
+    public function isCancellable(?\Carbon\Carbon $now = null): bool
+    {
+        $start = $this->presenceEvent?->start_at;
+        if (!$start) return true;
+
+        $end = $this->presenceEvent?->end_at ?? $now ?? \Carbon\Carbon::now();
+        return $start->diffInMinutes($end) < 10;
+    }
+
+    /**
+     * logic: generateRefinementTimeline(): Generates a list of days between start and end, excluding weekends ( and ), pre-filled with Workplace default hours.
+     *
+     * @return array<int, array{date: string, start_time: string, end_time: string}>
+     */
+    public function generateRefinementTimeline(string $defaultStart, string $defaultEnd, ?\Carbon\Carbon $until = null): array
+    {
+        $start = $this->presenceEvent?->start_at;
+        if (!$start) return [];
+
+        $timeline = [];
+        $end = $this->presenceEvent?->end_at ?? $until ?? \Carbon\Carbon::now();
+
+        $period = \Carbon\CarbonPeriod::create($start, '1 day', $end);
+
+        foreach ($period as $date) {
+            /** @var \Carbon\Carbon $date */
+            if ($date->isWeekend()) {
+                continue;
+            }
+
+            $timeline[] = [
+                'date' => $date->format('Y-m-d'),
+                'start_time' => $defaultStart,
+                'end_time' => $defaultEnd,
+            ];
+        }
+
+        return $timeline;
     }
 }

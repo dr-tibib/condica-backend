@@ -48,6 +48,7 @@ const Home = () => {
   }, [lastActionTime]);
 
   const handleSubmit = async () => {
+    if (!code) return;
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -59,29 +60,64 @@ const Home = () => {
         workplace_id: workplaceId,
       });
       
-      if (selectedFlow === 'delegation' && response.data.employee && !response.data.type) {
-        // Navigate to delegation wizard with employee info
-        navigate('/delegation', { state: { employee: response.data.employee } });
-        return;
+      const data = response.data;
+
+      // Handle State Machine Transitions for V2
+      if (data.type === 'correction_required') {
+          navigate('/shift-correction', { state: { ...data, code } });
+          return;
       }
 
-      if (selectedFlow === 'concediu' && response.data.employee) {
-        navigate('/concediu', { state: { employee: response.data.employee, code } });
-        return;
+      if (data.type === 'late_start_confirm') {
+          navigate('/late-start-confirm', { state: { ...data, code } });
+          return;
       }
 
-      if (response.data.type === 'delegation_end_schedule_required') {
-        navigate('/delegation-schedule', { state: { ...response.data, code } });
-        return;
+      if (data.type === 'delegation_cancel_confirm') {
+          navigate('/delegation-cancel', { state: { ...data, code } });
+          return;
       }
 
-      setSuccess(response.data.message);
-      setLastActionTime(Date.now());
-      setCode('');
-      setSelectedFlow('regular');
-      setTimeout(() => setSuccess(null), 3000);
+      if (data.type === 'delegation_refinement_required') {
+          navigate('/delegation-schedule', { state: { ...data, code, next_step: selectedFlow } });
+          return;
+      }
+
+      if (data.type === 'leave_screen') {
+          navigate('/leave', { state: { employee: data.employee, code } });
+          return;
+      }
+
+      if (data.type === 'delegation_wizard') {
+          navigate('/delegation', { state: { employee: data.employee } });
+          return;
+      }
+
+      // Simple flows (checkin, checkout, etc)
+      if (data.type === 'checkin' || data.type === 'checkout' || data.type === 'delegation_end_shift_start') {
+          setSuccess(data.message);
+          setLastActionTime(Date.now());
+          setCode('');
+          setSelectedFlow('regular');
+          setTimeout(() => setSuccess(null), 3000);
+          return;
+      }
+
+      // Fallback for direct responses
+      if (selectedFlow === 'delegation' && data.employee) {
+          navigate('/delegation', { state: { employee: data.employee } });
+      } else if (selectedFlow === 'leave' && data.employee) {
+          navigate('/leave', { state: { employee: data.employee, code } });
+      } else {
+          setSuccess(data.message || 'Operațiune reușită');
+          setCode('');
+          setLastActionTime(Date.now());
+          setTimeout(() => setSuccess(null), 3000);
+      }
+
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error processing code');
+      setError(err.response?.data?.message || 'Eroare la procesarea codului');
+      setCode('');
       setTimeout(() => setError(null), 3000);
     } finally {
       setIsLoading(false);
@@ -89,34 +125,36 @@ const Home = () => {
   };
 
   return (
-    <div className="flex flex-col p-6 gap-5 h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-sans">
-      <header className="flex justify-between items-center bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary text-white font-black text-4xl px-3 py-1 rounded">HD</div>
-          <div className="text-primary dark:text-blue-400 font-extrabold text-3xl tracking-tight uppercase">Hidraulica</div>
+    <div className="flex flex-col p-2.5 md:p-6 gap-3 md:gap-5 min-h-screen md:h-screen w-full md:overflow-hidden bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-sans">
+      <header className="flex flex-col md:flex-row justify-between items-center gap-2.5 md:gap-3 bg-white dark:bg-slate-800 p-2.5 md:p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="bg-primary text-white font-black text-xl md:text-4xl px-2 md:px-3 py-1 rounded">HD</div>
+          <div className="text-primary dark:text-blue-400 font-extrabold text-lg md:text-3xl tracking-tight uppercase">Hidraulica</div>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center justify-between md:justify-end gap-2 md:gap-4 w-full md:w-auto">
           {dashboardData.stats && (
             <button
               onClick={() => setIsPresenceModalOpen(true)}
-              className="flex items-center gap-4 text-xl font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 px-4 py-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 md:gap-4 text-[10px] md:text-xl font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30 px-2 md:px-4 py-1.5 md:py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-green-500">how_to_reg</span>
+              <div className="flex items-center gap-1 md:gap-2">
+                <span className="material-symbols-outlined text-green-500 text-base md:text-2xl">how_to_reg</span>
                 <span>{dashboardData.stats.present_count}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-500">flight_takeoff</span>
+              <div className="flex items-center gap-1 md:gap-2">
+                <span className="material-symbols-outlined text-blue-500 text-base md:text-2xl">flight_takeoff</span>
                 <span>{dashboardData.stats.active_delegations_count}</span>
               </div>
-              <div className="text-slate-300 dark:text-slate-600">/</div>
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-slate-400">groups</span>
+              <div className="text-slate-300 dark:text-slate-600 hidden md:block">/</div>
+              <div className="flex items-center gap-1 md:gap-2">
+                <span className="material-symbols-outlined text-slate-400 text-base md:text-2xl">groups</span>
                 <span>{dashboardData.stats.total_employees}</span>
               </div>
             </button>
           )}
-          <Clock />
+          <div className="scale-90 md:scale-100 origin-right">
+            <Clock />
+          </div>
         </div>
       </header>
       
@@ -133,7 +171,7 @@ const Home = () => {
       />
 
       {(error || success) && (
-        <div className={`p-4 rounded-xl text-center text-2xl font-bold ${error ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+        <div className={`p-4 rounded-xl text-center text-lg md:text-2xl font-bold ${error ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-green-100 text-green-600 border border-green-200'}`}>
             {error || success}
         </div>
       )}

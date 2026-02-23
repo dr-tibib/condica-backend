@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
+use App\Models\PresenceEvent;
 
 class LeaveRequestObserver
 {
@@ -14,6 +15,7 @@ class LeaveRequestObserver
     {
         if ($leaveRequest->status === 'APPROVED') {
             $this->adjustBalance($leaveRequest, 'deduct');
+            $this->syncPresenceEvent($leaveRequest);
         }
     }
 
@@ -29,9 +31,13 @@ class LeaveRequestObserver
 
             if ($originalStatus !== 'APPROVED' && $newStatus === 'APPROVED') {
                 $this->adjustBalance($leaveRequest, 'deduct');
+                $this->syncPresenceEvent($leaveRequest);
             } elseif ($originalStatus === 'APPROVED' && $newStatus !== 'APPROVED') {
                 $this->adjustBalance($leaveRequest, 'refund');
+                $this->removePresenceEvent($leaveRequest);
             }
+        } elseif ($leaveRequest->status === 'APPROVED' && ($leaveRequest->isDirty('start_date') || $leaveRequest->isDirty('end_date'))) {
+            $this->syncPresenceEvent($leaveRequest);
         }
     }
 
@@ -42,7 +48,38 @@ class LeaveRequestObserver
     {
         if ($leaveRequest->status === 'APPROVED') {
             $this->adjustBalance($leaveRequest, 'refund');
+            $this->removePresenceEvent($leaveRequest);
         }
+    }
+
+    /**
+     * Sync presence event for approved leave.
+     */
+    protected function syncPresenceEvent(LeaveRequest $leaveRequest): void
+    {
+        PresenceEvent::updateOrCreate(
+            [
+                'linkable_id' => $leaveRequest->id,
+                'linkable_type' => LeaveRequest::class,
+            ],
+            [
+                'employee_id' => $leaveRequest->employee_id,
+                'type' => 'leave',
+                'start_at' => $leaveRequest->start_date->startOfDay(),
+                'end_at' => $leaveRequest->end_date->endOfDay(),
+                'notes' => 'Approved leave: ' . ($leaveRequest->leaveType->name ?? 'Leave'),
+            ]
+        );
+    }
+
+    /**
+     * Remove presence event for leave.
+     */
+    protected function removePresenceEvent(LeaveRequest $leaveRequest): void
+    {
+        PresenceEvent::where('linkable_id', $leaveRequest->id)
+            ->where('linkable_type', LeaveRequest::class)
+            ->delete();
     }
 
     /**

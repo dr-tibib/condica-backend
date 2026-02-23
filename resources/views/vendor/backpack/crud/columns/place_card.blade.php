@@ -3,21 +3,28 @@
     $name = $entry->name;
     $address = $entry->address;
 
-    // Check if we can get a photo reference and override name/address if linked
+    $apiKey = config('services.google_places.key');
+    $imageUrl = null;
     if ($entry instanceof \App\Models\DelegationPlace) {
-        $photoReference = $entry->photo_reference;
+        $imageUrl = $entry->photo_url;
     } elseif ($entry instanceof \App\Models\Delegation) {
-        if ($entry->delegationPlace) {
+        $stops = $entry->stops;
+        if ($stops->count() > 0) {
+            $firstStop = $stops->first();
+            $name = $firstStop->name;
+            $address = $firstStop->address;
+            if ($firstStop->delegationPlace) {
+                 $imageUrl = $firstStop->delegationPlace->photo_url;
+            }
+            if ($stops->count() > 1) {
+                $name .= ' <span class="badge bg-blue text-white">+' . ($stops->count() - 1) . ' stops</span>';
+            }
+        } elseif ($entry->delegationPlace) {
             $name = $entry->delegationPlace->name;
             $address = $entry->delegationPlace->address;
-            $photoReference = $entry->delegationPlace->photo_reference;
+            $imageUrl = $entry->delegationPlace->photo_url;
         }
     }
-
-    $apiKey = config('services.google_places.key');
-    $imageUrl = $photoReference
-        ? (str_starts_with($photoReference, 'http') ? $photoReference : "https://maps.googleapis.com/maps/api/place/photo?maxwidth=200&photo_reference={$photoReference}&key={$apiKey}")
-        : null;
 @endphp
 
 <div class="d-flex align-items-center p-2 border rounded bg-white" style="max-width: 350px;">

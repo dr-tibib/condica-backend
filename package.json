@@ -40,6 +40,7 @@
         "react-google-places-autocomplete": "^4.1.0",
         "react-i18next": "^16.5.3",
         "react-router-dom": "^7.12.0",
+        "react-simple-keyboard": "^3.8.161",
         "zustand": "^5.0.10"
     }
 }

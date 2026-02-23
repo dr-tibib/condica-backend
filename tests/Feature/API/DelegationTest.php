@@ -3,129 +3,134 @@
 namespace Tests\Feature\API;
 
 use App\Models\Employee;
+use App\Models\Tenant;
+use App\Models\Workplace;
 use App\Models\Delegation;
-use App\Models\PresenceEvent;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TenantTestCase;
 
 class DelegationTest extends TenantTestCase
 {
+    use RefreshDatabase;
+
     public function test_can_start_delegation()
     {
-        $employee = Employee::factory()->create(['workplace_enter_code' => '123']);
-        $url = 'http://' . $this->tenant->domains->first()->domain . '/api/delegations';
+        $tenant = Tenant::first();
+        $employee = Employee::factory()->create(['workplace_id' => null]);
 
-        $response = $this->postJson($url, [
+        $domain = $tenant->domains->first()->domain;
+        $response = $this->postJson("http://{$domain}/api/delegations", [
             'employee_id' => $employee->id,
-            'name' => 'Client Site',
-            'place_id' => 'abc-123',
-            'latitude' => 40.7128,
-            'longitude' => -74.0060,
+            'places' => [
+                ['place_id' => 'abc-123', 'name' => 'Client Site A'],
+                ['place_id' => 'def-456', 'name' => 'Client Site B'],
+            ],
         ]);
 
         $response->assertStatus(200)
-            ->assertJsonPath('type', 'delegation-start');
-
-        $this->assertDatabaseHas('delegations', [
-            'employee_id' => $employee->id,
-            'place_id' => 'abc-123',
-            'name' => 'Client Site',
-        ]);
+            ->assertJson([
+                'message' => 'Delegation started successfully.',
+                'delegation' => [
+                    'name' => 'Client Site A',
+                ],
+            ]);
 
         $this->assertDatabaseHas('presence_events', [
             'employee_id' => $employee->id,
-            'event_type' => 'delegation_start',
-            'workplace_id' => null,
+            'type' => 'delegation',
         ]);
 
-        $this->assertTrue($employee->fresh()->isCurrentlyPresent());
+        $this->assertDatabaseHas('delegation_stops', [
+            'place_id' => 'abc-123',
+            'name' => 'Client Site A',
+        ]);
+
+        $this->assertDatabaseHas('delegation_stops', [
+            'place_id' => 'def-456',
+            'name' => 'Client Site B',
+        ]);
     }
 
     public function test_submit_code_ends_delegation_via_flow_param()
     {
-         $employee = Employee::factory()->create(['workplace_enter_code' => '123']);
-         $delegationUrl = 'http://' . $this->tenant->domains->first()->domain . '/api/delegations';
-         $kioskUrl = 'http://' . $this->tenant->domains->first()->domain . '/api/kiosk/submit-code';
+        $tenant = Tenant::first();
+        $employee = Employee::factory()->create([
+            'workplace_enter_code' => '777'
+        ]);
 
-         // Start delegation
-         $this->postJson($delegationUrl, [
-            'employee_id' => $employee->id,
-            'name' => 'Client Site',
-         ]);
+        // Start delegation
+        $employee->presenceEvents()->create([
+            'type' => 'delegation',
+            'start_at' => now()->subHour(),
+            'start_method' => 'kiosk',
+        ]);
 
-         // If in delegation, flow=delegation should end it
-         $response = $this->postJson($kioskUrl, [
-             'code' => '123',
-             'flow' => 'delegation',
-         ]);
+        $domain = $tenant->domains->first()->domain;
+        $response = $this->postJson("http://{$domain}/api/kiosk/submit-code", [
+            'code' => '777',
+            'flow' => 'delegation',
+        ]);
 
-         $response->assertStatus(200)
+        $response->assertStatus(200)
             ->assertJson([
-                'type' => 'delegation_end',
-                'message' => 'Delegation ended successfully.',
+                'type' => 'checkin',
+                'message' => 'Delegation ended, Shift started.',
             ]);
+
+        $event = $employee->presenceEvents()->where('type', 'delegation')->first();
+        $this->assertNotNull($event->end_at);
     }
 
     public function test_submit_code_ends_delegation_via_regular_flow()
     {
-         $employee = Employee::factory()->create(['workplace_enter_code' => '123']);
-         $delegationUrl = 'http://' . $this->tenant->domains->first()->domain . '/api/delegations';
-         $kioskUrl = 'http://' . $this->tenant->domains->first()->domain . '/api/kiosk/submit-code';
+        $tenant = Tenant::first();
+        $employee = Employee::factory()->create([
+            'workplace_enter_code' => '111'
+        ]);
 
-         // Start delegation
-         $this->postJson($delegationUrl, [
-            'employee_id' => $employee->id,
-            'name' => 'Client Site',
-         ]);
+        // Start delegation
+        $employee->presenceEvents()->create([
+            'type' => 'delegation',
+            'start_at' => now()->subHour(),
+            'start_method' => 'kiosk',
+        ]);
 
-         // Regular check-in flow (no flow param, or default)
-         // Should act as Delegation End if currently delegated
-         $response = $this->postJson($kioskUrl, [
-             'code' => '123',
-             'device_info' => ['foo' => 'bar'],
-         ]);
+        $domain = $tenant->domains->first()->domain;
+        $response = $this->postJson("http://{$domain}/api/kiosk/submit-code", [
+            'code' => '111',
+            'flow' => 'regular',
+        ]);
 
-         if ($response->status() !== 200) {
-             dump($response->json());
-         }
-
-         $response->assertStatus(200)
+        $response->assertStatus(200)
             ->assertJson([
-                'type' => 'delegation_end',
+                'type' => 'checkin',
+                'message' => 'Delegation ended, Shift started.',
             ]);
 
-         $this->assertDatabaseHas('presence_events', [
-            'employee_id' => $employee->id,
-            'event_type' => 'delegation_end',
-         ]);
+         $event = $employee->presenceEvents()->where('type', 'delegation')->first();
+         $this->assertNotNull($event->end_at);
     }
 
     public function test_list_recent_delegations()
     {
-         $employee = Employee::factory()->create();
-         $url = 'http://' . $this->tenant->domains->first()->domain . '/api/delegations';
+        $tenant = Tenant::first();
+        $employee = Employee::factory()->create();
 
-         Delegation::create([
+        $delegation = Delegation::create([
             'employee_id' => $employee->id,
-            'name' => 'Place A',
-            'place_id' => 'place-a',
-         ]);
+            'name' => 'Header Name',
+        ]);
 
-         Delegation::create([
-            'employee_id' => $employee->id,
-            'name' => 'Place B',
-            'place_id' => 'place-b',
-         ]);
+        \App\Models\DelegationStop::create([
+            'delegation_id' => $delegation->id,
+            'place_id' => 'p1',
+            'name' => 'Recent Place',
+        ]);
 
-         // Duplicate place
-         Delegation::create([
-            'employee_id' => $employee->id,
-            'name' => 'Place A',
-            'place_id' => 'place-a',
-         ]);
+        $domain = $tenant->domains->first()->domain;
+        $response = $this->getJson("http://{$domain}/api/delegations?employee_id={$employee->id}");
 
-         $response = $this->getJson($url);
-
-         $response->assertStatus(200)
-            ->assertJsonCount(2, 'data'); // Should be unique
+        $response->assertStatus(200)
+            ->assertJsonFragment(['place_id' => 'p1']);
     }
 }

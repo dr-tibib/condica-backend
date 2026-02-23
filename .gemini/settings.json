@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "laravel-boost": {
+      "command": "lando",
+      "args": [
+        "artisan",
+        "boost:mcp"
+      ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--browser-url=http://172.27.208.1:9223"
+      ]
+    }
+  }
+}

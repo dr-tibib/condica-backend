@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface TimePickerProps {
     value: string; // HH:mm
@@ -7,46 +7,74 @@ interface TimePickerProps {
 }
 
 const TimePicker: React.FC<TimePickerProps> = ({ value, onChange, className }) => {
-    // Ensure value is HH:mm
     const [hours, minutes] = value ? value.split(':') : ['08', '00'];
+    const minRef = useRef<HTMLInputElement>(null);
 
-    const handleHourChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        onChange(`${e.target.value}:${minutes}`);
+    const handleHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let val = e.target.value.replace(/[^0-9]/g, '');
+        if (val.length > 2) val = val.slice(0, 2);
+        
+        const numVal = parseInt(val);
+        if (val.length === 2 && (numVal < 0 || numVal > 23)) return;
+
+        onChange(`${val.padStart(2, '0').slice(-2)}:${minutes}`);
+        
+        // Auto-focus minutes if 2 digits entered
+        if (val.length === 2) {
+            minRef.current?.focus();
+            minRef.current?.select();
+        }
     };
 
-    const handleMinuteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        onChange(`${hours}:${e.target.value}`);
+    const handleMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let val = e.target.value.replace(/[^0-9]/g, '');
+        if (val.length > 2) val = val.slice(0, 2);
+        
+        const numVal = parseInt(val);
+        if (val.length === 2 && (numVal < 0 || numVal > 59)) return;
+
+        onChange(`${hours}:${val.padStart(2, '0').slice(-2)}`);
     };
 
-    const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
-    const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+    const onBlur = (field: 'h' | 'm', val: string) => {
+        const padded = val.padStart(2, '0').slice(-2);
+        if (field === 'h') onChange(`${padded}:${minutes}`);
+        else onChange(`${hours}:${padded}`);
+    };
+
+    const onFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        e.target.select();
+    };
 
     return (
-        <div className={`flex gap-2 items-center ${className || ''}`}>
+        <div className={`flex gap-1 items-center ${className || ''}`}>
             <div className="relative flex-1">
-                <select
+                <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={hours}
                     onChange={handleHourChange}
-                    className="w-full p-3 pr-8 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-xl font-mono focus:ring-2 focus:ring-blue-500 outline-none appearance-none text-slate-900 dark:text-white"
-                >
-                    {hourOptions.map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-700 dark:text-slate-300">
-                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                </div>
+                    onFocus={onFocus}
+                    onBlur={(e) => onBlur('h', e.target.value)}
+                    className="w-full p-2 rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xl font-mono text-center focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-slate-900 dark:text-white"
+                    placeholder="HH"
+                />
             </div>
             <span className="text-xl font-bold text-slate-400">:</span>
             <div className="relative flex-1">
-                <select
+                <input
+                    ref={minRef}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={minutes}
                     onChange={handleMinuteChange}
-                    className="w-full p-3 pr-8 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-xl font-mono focus:ring-2 focus:ring-blue-500 outline-none appearance-none text-slate-900 dark:text-white"
-                >
-                    {minuteOptions.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-700 dark:text-slate-300">
-                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                </div>
+                    onFocus={onFocus}
+                    onBlur={(e) => onBlur('m', e.target.value)}
+                    className="w-full p-2 rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xl font-mono text-center focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-slate-900 dark:text-white"
+                    placeholder="mm"
+                />
             </div>
         </div>
     );

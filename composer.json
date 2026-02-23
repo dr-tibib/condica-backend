@@ -28,7 +28,9 @@
     "require-dev": {
         "backpack/generators": "^4.1",
         "fakerphp/faker": "^1.23",
+        "google-gemini-php/laravel": "*",
         "laravel/boost": "^1.8",
+        "laravel/dusk": "*",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
         "laravel/sail": "^1.41",

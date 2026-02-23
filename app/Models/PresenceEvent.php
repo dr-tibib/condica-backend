@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class PresenceEvent extends Model
 {
@@ -25,16 +26,23 @@ class PresenceEvent extends Model
     protected $fillable = [
         'employee_id',
         'workplace_id',
-        'event_type',
-        'event_time',
-        'method',
-        'latitude',
-        'longitude',
-        'accuracy',
-        'device_info',
+        'start_at',
+        'end_at',
+        'type',
+        'start_method',
+        'start_latitude',
+        'start_longitude',
+        'start_accuracy',
+        'start_device_info',
+        'end_method',
+        'end_latitude',
+        'end_longitude',
+        'end_accuracy',
+        'end_device_info',
         'app_version',
         'notes',
-        'pair_event_id',
+        'linkable_id',
+        'linkable_type',
     ];
 
     /**
@@ -45,11 +53,16 @@ class PresenceEvent extends Model
     protected function casts(): array
     {
         return [
-            'event_time' => 'datetime',
-            'device_info' => 'array',
-            'latitude' => 'decimal:8',
-            'longitude' => 'decimal:8',
-            'accuracy' => 'integer',
+            'start_at' => 'datetime',
+            'end_at' => 'datetime',
+            'start_device_info' => 'array',
+            'end_device_info' => 'array',
+            'start_latitude' => 'decimal:8',
+            'start_longitude' => 'decimal:8',
+            'end_latitude' => 'decimal:8',
+            'end_longitude' => 'decimal:8',
+            'start_accuracy' => 'integer',
+            'end_accuracy' => 'integer',
         ];
     }
 
@@ -70,27 +83,19 @@ class PresenceEvent extends Model
     }
 
     /**
-     * Get the paired event (check-out linked to check-in or vice versa).
+     * Get the linked entity (Delegation, LeaveRequest, etc.)
      */
-    public function pairedEvent(): BelongsTo
+    public function linkable(): MorphTo
     {
-        return $this->belongsTo(PresenceEvent::class, 'pair_event_id');
+        return $this->morphTo();
     }
 
     /**
-     * Scope a query to only include check-in events.
+     * Scope a query to only include active events (not checked out).
      */
-    public function scopeCheckIns(Builder $query): void
+    public function scopeActive(Builder $query): void
     {
-        $query->whereIn('event_type', ['check_in', 'delegation_start']);
-    }
-
-    /**
-     * Scope a query to only include check-out events.
-     */
-    public function scopeCheckOuts(Builder $query): void
-    {
-        $query->whereIn('event_type', ['check_out', 'delegation_end']);
+        $query->whereNull('end_at');
     }
 
     /**
@@ -98,7 +103,7 @@ class PresenceEvent extends Model
      */
     public function scopeToday(Builder $query): void
     {
-        $query->whereDate('event_time', today());
+        $query->whereDate('start_at', today());
     }
 
     /**
@@ -110,84 +115,66 @@ class PresenceEvent extends Model
     }
 
     /**
-     * Scope a query to only include events for a specific workplace.
+     * Scope a query to only include a specific type.
      */
-    public function scopeForWorkplace(Builder $query, int $workplaceId): void
+    public function scopeOfType(Builder $query, string $type): void
     {
-        $query->where('workplace_id', $workplaceId);
+        $query->where('type', $type);
     }
 
     /**
-     * Scope a query to only include automatic events.
+     * Check if the event is completed.
      */
-    public function scopeAutomatic(Builder $query): void
+    public function isCompleted(): bool
     {
-        $query->where('method', 'auto');
+        return $this->end_at !== null;
     }
 
     /**
-     * Scope a query to only include manual events.
+     * Calculate the duration in minutes.
+     *
+     * @return int|null Duration in minutes, or null if not completed
      */
-    public function scopeManual(Builder $query): void
+    public function getDurationMinutes(): ?int
     {
-        $query->where('method', 'manual');
+        if (! $this->isCompleted()) {
+            return null;
+        }
+
+        return (int) $this->start_at->diffInMinutes($this->end_at);
     }
 
-    /**
-     * Check if this event is a check-in.
-     */
     public function isCheckIn(): bool
     {
-        return in_array($this->event_type, ['check_in', 'delegation_start']);
+        return $this->type === 'presence';
     }
 
-    /**
-     * Check if this event is a check-out.
-     */
     public function isCheckOut(): bool
     {
-        return in_array($this->event_type, ['check_out', 'delegation_end']);
+        return $this->type === 'presence' && $this->end_at !== null;
     }
 
     public function isDelegationStart(): bool
     {
-        return $this->event_type === 'delegation_start';
+        return $this->type === 'delegation';
     }
 
     public function isDelegationEnd(): bool
     {
-        return $this->event_type === 'delegation_end';
+        return $this->type === 'delegation' && $this->end_at !== null;
     }
 
     /**
-     * Get the paired event (loads if not already loaded).
+     * logic: isOvernight(): Returns true if the system clock detects a transition past 00:00 without a checkout.
      */
-    public function getPairedEvent(): ?PresenceEvent
+    public function isOvernight(?\Carbon\Carbon $now = null): bool
     {
-        if ($this->pair_event_id === null) {
-            return null;
+        if ($this->end_at !== null) {
+            return false;
         }
 
-        return $this->pairedEvent()->first();
-    }
+        $now = $now ?? \Carbon\Carbon::now();
 
-    /**
-     * Calculate the duration in minutes between this event and its paired event.
-     *
-     * @return int|null Duration in minutes, or null if no paired event exists
-     */
-    public function getDurationMinutes(): ?int
-    {
-        $paired = $this->getPairedEvent();
-
-        if ($paired === null) {
-            return null;
-        }
-
-        if ($this->isCheckIn()) {
-            return (int) $this->event_time->diffInMinutes($paired->event_time);
-        }
-
-        return (int) $paired->event_time->diffInMinutes($this->event_time);
+        return ! $this->start_at->isSameDay($now);
     }
 }

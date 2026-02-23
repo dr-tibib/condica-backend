@@ -129,13 +129,14 @@ class Workplace extends Model
     /**
      * Get users currently present at this workplace.
      *
-     * @return Collection<int, User>
+     * @return Collection<int, Employee>
      */
     public function currentlyPresentUsers(): Collection
     {
-        return Employee::whereHas('latestPresenceEvent', function ($query) {
+        return Employee::whereHas('presenceEvents', function ($query) {
             $query->where('workplace_id', $this->id)
-                ->where('event_type', 'check_in');
+                ->where('type', 'presence')
+                ->active();
         })->get();
     }
 
@@ -147,8 +148,7 @@ class Workplace extends Model
     public function todayCheckIns(): Collection
     {
         return $this->presenceEvents()
-            ->checkIns()
-            ->today()
+            ->whereDate('start_at', today())
             ->get();
     }
 
@@ -160,8 +160,7 @@ class Workplace extends Model
     public function todayCheckOuts(): Collection
     {
         return $this->presenceEvents()
-            ->checkOuts()
-            ->today()
+            ->whereDate('end_at', today())
             ->get();
     }
 }

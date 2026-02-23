@@ -14,12 +14,10 @@ class ConfigController extends Controller
      */
     public function index(): JsonResponse
     {
-        $data = tenant()->data ?? [];
-
         return response()->json([
-            'company_name' => $data['company_name'] ?? null,
-            'logo_url' => isset($data['logo']) ? asset('storage/' . $data['logo']) : null,
-            'code_length' => (int) ($data['code_length'] ?? 3),
+            'company_name' => tenant('company_name'),
+            'logo_url' => tenant('logo') ? asset('storage/' . tenant('logo')) : null,
+            'code_length' => (int) (tenant('code_length') ?? 3),
         ]);
     }
 }

@@ -31,6 +31,9 @@ Route::middleware([
     Route::get('/', function () {
         return view('welcome', ['tenant' => tenant()]);
     });
+    Route::get('/delegation-test', function () {
+        return view('welcome', ['tenant' => tenant()]);
+    });
 });
 
 Route::middleware([
@@ -45,9 +48,16 @@ Route::middleware([
         Route::get('/employees/status', [KioskController::class, 'getAllEmployeesStatus']);
         Route::post('/submit-code', [KioskController::class, 'submitCode']);
         Route::post('/end-delegation-schedule', [KioskController::class, 'endDelegationWithSchedule']);
+        
+        // New State Machine Endpoints
+        Route::post('/handle-late-start', [KioskController::class, 'handleLateStart']);
+        Route::post('/handle-shift-correction', [KioskController::class, 'handleShiftCorrection']);
+        Route::post('/cancel-delegation', [KioskController::class, 'cancelDelegation']);
+        Route::post('/handle-leave-submission', [KioskController::class, 'submitLeave']);
+
         Route::get('/vehicles', [KioskController::class, 'getVehicles']);
         Route::get('/saved-places', [KioskController::class, 'getSavedPlaces']);
-        Route::post('/leave-request', [KioskController::class, 'storeLeaveRequest']);
+        Route::get('/places/search', [KioskController::class, 'searchPlaces']);
     });
 
     Route::prefix('delegations')->group(function () {

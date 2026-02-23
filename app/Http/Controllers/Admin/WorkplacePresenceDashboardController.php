@@ -39,13 +39,13 @@ class WorkplacePresenceDashboardController extends CrudController
         // Only run expensive queries if not AJAX (Dashboard view)
         if (! $this->crud->getRequest()->ajax()) {
             // Widget: Currently Working (Real-time)
-            $currentlyWorkingCount = Employee::whereHas('latestPresenceEvent', function ($query) {
-                $query->where('event_type', 'check_in');
+            $currentlyWorkingCount = Employee::whereHas('presenceEvents', function ($query) {
+                $query->where('type', 'presence')->active();
             })->count();
 
             // Widget: Active in Selected Range
             $activeInRangeCount = Employee::whereHas('presenceEvents', function($q) use ($startDate, $endDate) {
-                $q->whereBetween('event_time', [$startDate, $endDate]);
+                $q->whereBetween('start_at', [$startDate, $endDate]);
             })->count();
 
             Widget::add()->to('before_content')->type('div')->class('row')->content([
@@ -69,8 +69,8 @@ class WorkplacePresenceDashboardController extends CrudController
 
         // 3. Eager Load Presence Events for the Range to avoid N+1
         $this->crud->query->with(['presenceEvents' => function($query) use ($startDate, $endDate) {
-            $query->whereBetween('event_time', [$startDate, $endDate])
-                  ->orderBy('event_time', 'asc');
+            $query->whereBetween('start_at', [$startDate, $endDate])
+                  ->orderBy('start_at', 'asc');
         }]);
 
         // Also eager load department and workplace
@@ -85,10 +85,6 @@ class WorkplacePresenceDashboardController extends CrudController
             ],
             false,
             function ($value) { // if the filter is active
-                // The filter logic is handled by the eager load modification above
-                // We don't filter the *Employee* list itself (we show all employees),
-                // unless we want to hide employees with no activity.
-                // For now, let's show all employees.
             });
         }
 
@@ -98,7 +94,7 @@ class WorkplacePresenceDashboardController extends CrudController
             'label' => __('Employee'),
             'type' => 'closure',
             'function' => function($entry) {
-                 return $entry->name; // Employee has getNameAttribute accessor
+                 return $entry->name;
             },
              'searchLogic' => function ($query, $column, $searchTerm) {
                 $query->orWhere('first_name', 'like', '%'.$searchTerm.'%');
@@ -120,9 +116,8 @@ class WorkplacePresenceDashboardController extends CrudController
             'label' => __('First Check In'),
             'type' => 'closure',
             'function' => function($entry) {
-                // $entry->presenceEvents is already filtered by eager load
-                $first = $entry->presenceEvents->where('event_type', 'check_in')->first();
-                return $first ? $first->event_time->format('H:i') : '-';
+                $first = $entry->presenceEvents->where('type', 'presence')->first();
+                return $first ? $first->start_at->format('H:i') : '-';
             }
         ]);
 
@@ -131,8 +126,8 @@ class WorkplacePresenceDashboardController extends CrudController
             'label' => __('Last Check Out'),
             'type' => 'closure',
             'function' => function($entry) {
-                $last = $entry->presenceEvents->where('event_type', 'check_out')->last();
-                return $last ? $last->event_time->format('H:i') : '-';
+                $last = $entry->presenceEvents->where('type', 'presence')->last();
+                return $last && $last->end_at ? $last->end_at->format('H:i') : '-';
             }
         ]);
 
@@ -141,7 +136,6 @@ class WorkplacePresenceDashboardController extends CrudController
             'label' => __('Total Time'),
             'type' => 'closure',
             'function' => function($entry) {
-                // Calculate total time from filtered events
                 return $this->calculateDurationString($entry->presenceEvents);
             }
         ]);
@@ -155,7 +149,6 @@ class WorkplacePresenceDashboardController extends CrudController
                      return '<span class="badge bg-secondary">' . __('Absent') . '</span>';
                  }
 
-                 // If looking at Today, check real-time status
                  if ($endDate->isToday() && $entry->isCurrentlyPresent()) {
                      return '<span class="badge bg-success">' . __('Working Now') . '</span>';
                  }
@@ -169,14 +162,12 @@ class WorkplacePresenceDashboardController extends CrudController
     private function calculateDurationString($events)
     {
         $totalMinutes = 0;
-        $currentCheckIn = null;
 
         foreach ($events as $event) {
-            if ($event->event_type === 'check_in') {
-                $currentCheckIn = $event;
-            } elseif ($event->event_type === 'check_out' && $currentCheckIn !== null) {
-                $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes($event->event_time);
-                $currentCheckIn = null;
+            if ($event->end_at) {
+                $totalMinutes += (int) $event->start_at->diffInMinutes($event->end_at);
+            } elseif ($event->start_at->isToday()) {
+                $totalMinutes += (int) $event->start_at->diffInMinutes(now());
             }
         }
 

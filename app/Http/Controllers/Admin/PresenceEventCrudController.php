@@ -46,28 +46,17 @@ class PresenceEventCrudController extends CrudController
 
         CRUD::column('workplace')->type('relationship')->label(__('Workplace'))->attribute('name');
 
-        CRUD::column('event_type')
-            ->label(__('Event Type'))
+        CRUD::column('type')
+            ->label(__('Type'))
             ->type('closure')
             ->function(function ($entry) {
-                $badge = $entry->event_type === 'check_in' ? 'bg-success' : 'bg-info';
-                $text = ucfirst(str_replace('_', ' ', $entry->event_type));
-
-                return '<span class="badge ' . $badge . ' text-white">' . $text . '</span>';
+                $badge = $entry->type === 'presence' ? 'bg-success' : 'bg-primary';
+                return '<span class="badge ' . $badge . ' text-white">' . ucfirst($entry->type) . '</span>';
             })
             ->escaped(false);
 
-        CRUD::column('event_time')->label(__('Time'))->type('datetime')->format('Y-MM-DD HH:mm:ss');
-
-        CRUD::column('method')
-            ->label(__('Method'))
-            ->type('closure')
-            ->function(function ($entry) {
-                $badge = $entry->method === 'auto' ? 'bg-primary' : 'bg-secondary';
-
-                return '<span class="badge ' . $badge . ' text-white">' . ucfirst($entry->method) . '</span>';
-            })
-            ->escaped(false);
+        CRUD::column('start_at')->label(__('Start'))->type('datetime')->format('Y-MM-DD HH:mm:ss');
+        CRUD::column('end_at')->label(__('End'))->type('datetime')->format('Y-MM-DD HH:mm:ss');
 
         CRUD::column('duration')
             ->label(__('Duration'))
@@ -75,6 +64,10 @@ class PresenceEventCrudController extends CrudController
             ->function(function ($entry) {
                 $duration = $entry->getDurationMinutes();
                 if ($duration === null) {
+                    if (!$entry->end_at && $entry->start_at->isToday()) {
+                         $duration = (int) $entry->start_at->diffInMinutes(now());
+                         return $duration . 'm (active)';
+                    }
                     return '-';
                 }
                 $hours = floor($duration / 60);
@@ -82,18 +75,6 @@ class PresenceEventCrudController extends CrudController
 
                 return $hours . 'h ' . $minutes . 'm';
             });
-
-        CRUD::column('pair_event')
-            ->label(__('Paired Event'))
-            ->type('closure')
-            ->function(function ($entry) {
-                if ($entry->pair_event_id) {
-                    return '<a href="' . backpack_url('presence-event/' . $entry->pair_event_id . '/show') . '" class="badge bg-warning">' . __('View Paired') . '</a>';
-                }
-
-                return '-';
-            })
-            ->escaped(false);
 
         // Filters
         CRUD::filter('employee')
@@ -106,36 +87,15 @@ class PresenceEventCrudController extends CrudController
                 CRUD::addClause('where', 'employee_id', $value);
             });
 
-        CRUD::filter('workplace')
-            ->label(__('Workplace'))
-            ->type('select2')
-            ->values(function () {
-                return \App\Models\Workplace::all()->pluck('name', 'id')->toArray();
-            })
-            ->whenActive(function ($value) {
-                CRUD::addClause('where', 'workplace_id', $value);
-            });
-
-        CRUD::filter('event_type')
-            ->label(__('Event Type'))
+        CRUD::filter('type')
+            ->label(__('Type'))
             ->type('select2')
             ->values([
-                'check_in' => __('Check In'),
-                'check_out' => __('Check Out'),
+                'presence' => __('Presence'),
+                'delegation' => __('Delegation'),
             ])
             ->whenActive(function ($value) {
-                CRUD::addClause('where', 'event_type', $value);
-            });
-
-        CRUD::filter('method')
-            ->label(__('Method'))
-            ->type('select2')
-            ->values([
-                'auto' => __('Automatic'),
-                'manual' => __('Manual'),
-            ])
-            ->whenActive(function ($value) {
-                CRUD::addClause('where', 'method', $value);
+                CRUD::addClause('where', 'type', $value);
             });
 
         CRUD::filter('date_range')
@@ -143,12 +103,14 @@ class PresenceEventCrudController extends CrudController
             ->type('date_range')
             ->whenActive(function ($values) {
                 $dates = json_decode($values);
-                CRUD::addClause('whereDate', 'event_time', '>=', $dates->from);
-                CRUD::addClause('whereDate', 'event_time', '<=', $dates->to);
+                CRUD::addClause('where', function($query) use ($dates) {
+                    $query->whereBetween('start_at', [$dates->from, $dates->to])
+                          ->orWhereBetween('end_at', [$dates->from, $dates->to]);
+                });
             });
 
         // Default order
-        CRUD::orderBy('event_time', 'desc');
+        CRUD::orderBy('start_at', 'desc');
 
         // Add export button
         CRUD::button('export')->stack('top')->view('crud::buttons.export');
@@ -174,12 +136,10 @@ class PresenceEventCrudController extends CrudController
                 __('ID'),
                 __('Employee'),
                 __('Workplace'),
-                __('Event Type'),
-                __('Event Time'),
-                __('Method'),
+                __('Type'),
+                __('Start'),
+                __('End'),
                 __('Duration (minutes)'),
-                __('Latitude'),
-                __('Longitude'),
                 __('Notes')
             ]);
 
@@ -188,13 +148,11 @@ class PresenceEventCrudController extends CrudController
                 fputcsv($file, [
                     $entry->id,
                     $entry->employee->name,
-                    $entry->workplace->name,
-                    $entry->event_type,
-                    $entry->event_time->format('Y-m-d H:i:s'),
-                    $entry->method,
+                    $entry->workplace->name ?? '-',
+                    $entry->type,
+                    $entry->start_at->format('Y-m-d H:i:s'),
+                    $entry->end_at ? $entry->end_at->format('Y-m-d H:i:s') : '',
                     $entry->getDurationMinutes() ?? '',
-                    $entry->latitude ?? '',
-                    $entry->longitude ?? '',
                     $entry->notes ?? '',
                 ]);
             }

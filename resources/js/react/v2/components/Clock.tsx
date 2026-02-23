@@ -14,15 +14,15 @@ const Clock = () => {
   const s = format(time.getSeconds());
 
   return (
-    <div className="digital-clock flex items-center gap-1">
-      <span className="bg-slate-800 text-white px-2 py-1 rounded text-3xl font-mono">{h[0]}</span>
-      <span className="bg-slate-800 text-white px-2 py-1 rounded text-3xl font-mono">{h[1]}</span>
-      <div className="text-3xl font-bold dark:text-slate-400 mx-1">:</div>
-      <span className="bg-slate-800 text-white px-2 py-1 rounded text-3xl font-mono">{m[0]}</span>
-      <span className="bg-slate-800 text-white px-2 py-1 rounded text-3xl font-mono">{m[1]}</span>
-      <div className="text-3xl font-bold dark:text-slate-400 mx-1">:</div>
-      <span className="bg-slate-800 text-white px-2 py-1 rounded text-3xl font-mono">{s[0]}</span>
-      <span className="bg-slate-800 text-white px-2 py-1 rounded text-3xl font-mono">{s[1]}</span>
+    <div className="digital-clock flex items-center gap-0.5 md:gap-1">
+      <span className="bg-slate-800 text-white px-1 md:px-2 py-0.5 md:py-1 rounded text-base md:text-3xl font-mono">{h[0]}</span>
+      <span className="bg-slate-800 text-white px-1 md:px-2 py-0.5 md:py-1 rounded text-base md:text-3xl font-mono">{h[1]}</span>
+      <div className="text-base md:text-3xl font-bold dark:text-slate-400 mx-0.5 md:mx-1">:</div>
+      <span className="bg-slate-800 text-white px-1 md:px-2 py-0.5 md:py-1 rounded text-base md:text-3xl font-mono">{m[0]}</span>
+      <span className="bg-slate-800 text-white px-1 md:px-2 py-0.5 md:py-1 rounded text-base md:text-3xl font-mono">{m[1]}</span>
+      <div className="text-base md:text-3xl font-bold dark:text-slate-400 mx-0.5 md:mx-1">:</div>
+      <span className="bg-slate-800 text-white px-1 md:px-2 py-0.5 md:py-1 rounded text-base md:text-3xl font-mono">{s[0]}</span>
+      <span className="bg-slate-800 text-white px-1 md:px-2 py-0.5 md:py-1 rounded text-base md:text-3xl font-mono">{s[1]}</span>
     </div>
   );
 };

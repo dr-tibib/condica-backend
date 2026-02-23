@@ -34,7 +34,7 @@ class TeamCommandCenterController extends CrudController
             'latestPresenceEvent.workplace',
             'department',
             'presenceEvents' => function($q) use ($today) {
-                $q->where('event_time', '>=', $today)->orderBy('event_time');
+                $q->where('start_at', '>=', $today)->orderBy('start_at');
             },
             'leaveRequests' => function($q) use ($today) {
                 $q->where('status', 'APPROVED')
@@ -88,13 +88,13 @@ class TeamCommandCenterController extends CrudController
                 if ($approvedLeave) {
                     $status = 'On Leave';
                     $statusClass = 'secondary';
-                } elseif ($latestEvent) {
-                    if ($latestEvent->event_type === 'check_in') {
-                         if ($latestEvent->event_time->isToday()) {
+                } elseif ($latestEvent && !$latestEvent->end_at) {
+                    if ($latestEvent->type === 'presence') {
+                         if ($latestEvent->start_at->isToday()) {
                              $status = 'Active';
                              $statusClass = 'success';
                          }
-                    } elseif ($latestEvent->event_type === 'delegation_start') {
+                    } elseif ($latestEvent->type === 'delegation') {
                         $status = 'In Delegation';
                         $statusClass = 'primary';
                     }
@@ -118,12 +118,12 @@ class TeamCommandCenterController extends CrudController
                 $status = 'Absent';
                 if ($approvedLeave) {
                     $status = 'On Leave';
-                } elseif ($latestEvent) {
-                    if ($latestEvent->event_type === 'check_in') {
-                        if ($latestEvent->event_time->isToday()) {
+                } elseif ($latestEvent && !$latestEvent->end_at) {
+                    if ($latestEvent->type === 'presence') {
+                        if ($latestEvent->start_at->isToday()) {
                             $status = 'Active';
                         }
-                    } elseif ($latestEvent->event_type === 'delegation_start') {
+                    } elseif ($latestEvent->type === 'delegation') {
                         $status = 'In Delegation';
                     }
                 }
@@ -208,16 +208,14 @@ class TeamCommandCenterController extends CrudController
         $employeesNotOnLeave = $totalEmployees - $onLeaveTodayCount;
 
         // Working Now (On Shift + Delegation)
-        // User has latest event as check_in or delegation_start today
-        $workingNowCount = Employee::whereHas('latestPresenceEvent', function ($query) use ($today) {
-            $query->whereIn('event_type', ['check_in', 'delegation_start'])
-                  ->where('event_time', '>=', $today);
+        // User has an active presence event
+        $workingNowCount = Employee::whereHas('presenceEvents', function ($query) {
+            $query->active();
         })->count();
 
         // On Delegation Only
-        $onDelegationCount = Employee::whereHas('latestPresenceEvent', function ($query) use ($today) {
-            $query->where('event_type', 'delegation_start')
-                  ->where('event_time', '>=', $today);
+        $onDelegationCount = Employee::whereHas('presenceEvents', function ($query) {
+            $query->where('type', 'delegation')->active();
         })->count();
 
         // Absent / Late
@@ -340,8 +338,10 @@ class TeamCommandCenterController extends CrudController
         $employees = Employee::with([
             'department',
             'presenceEvents' => function($q) use ($startOfMonth, $endOfMonth) {
-                $q->whereBetween('event_time', [$startOfMonth, $endOfMonth])
-                  ->orderBy('event_time');
+                $q->where(function($query) use ($startOfMonth, $endOfMonth) {
+                    $query->whereBetween('start_at', [$startOfMonth, $endOfMonth])
+                          ->orWhereBetween('end_at', [$startOfMonth, $endOfMonth]);
+                })->orderBy('start_at');
             },
             'leaveRequests' => function($q) use ($startOfMonth, $endOfMonth) {
                 $q->where('status', 'APPROVED')
@@ -406,7 +406,7 @@ class TeamCommandCenterController extends CrudController
                     } else {
                         // Calculate hours
                         $dayEvents = $employee->presenceEvents->filter(function($e) use ($currentDay) {
-                            return $e->event_time->isSameDay($currentDay);
+                            return $e->start_at->isSameDay($currentDay);
                         });
 
                         if ($dayEvents->isNotEmpty()) {
@@ -421,11 +421,6 @@ class TeamCommandCenterController extends CrudController
                             }
                         } else {
                             // Absent
-                            // Only mark absent if strictly required and not future
-                            if ($currentDay->isPast()) {
-                                // $dayVal = 'Abs';
-                                // $userRow['totals']['abs']++;
-                            }
                         }
                     }
                 }
@@ -462,20 +457,13 @@ class TeamCommandCenterController extends CrudController
     private function calculateMinutesFromEvents($events)
     {
         $totalMinutes = 0;
-        $currentCheckIn = null;
 
         foreach ($events as $event) {
-            if ($event->event_type === 'check_in') {
-                $currentCheckIn = $event;
-            } elseif ($event->event_type === 'check_out' && $currentCheckIn !== null) {
-                $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes($event->event_time);
-                $currentCheckIn = null;
+            if ($event->end_at) {
+                $totalMinutes += (int) $event->start_at->diffInMinutes($event->end_at);
+            } else {
+                $totalMinutes += (int) $event->start_at->diffInMinutes(Carbon::now());
             }
-        }
-
-        // If still checked in, calculate until now
-        if ($currentCheckIn !== null) {
-             $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes(Carbon::now());
         }
 
         return $totalMinutes;
@@ -484,25 +472,18 @@ class TeamCommandCenterController extends CrudController
     private function calculateMinutesForDay($events, $day)
     {
         $totalMinutes = 0;
-        $currentCheckIn = null;
 
         foreach ($events as $event) {
-            if ($event->event_type === 'check_in') {
-                $currentCheckIn = $event;
-            } elseif ($event->event_type === 'check_out' && $currentCheckIn !== null) {
-                $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes($event->event_time);
-                $currentCheckIn = null;
-            }
-        }
+            $start = $event->start_at;
+            $end = $event->end_at ?? ($day->isToday() ? Carbon::now() : $start->copy()->endOfDay());
 
-        // If check-in was today but no checkout
-        if ($currentCheckIn !== null) {
-             if ($day->isToday()) {
-                 $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes(Carbon::now());
-             } else {
-                 // Open ended in past. Do not count huge hours. Count 0 to indicate error/missing checkout.
-                 // The employee must correct their timesheet.
-             }
+            // Ensure we only count duration within the given day
+            $effectiveStart = $start->isSameDay($day) ? $start : $day->copy()->startOfDay();
+            $effectiveEnd = $end->isSameDay($day) ? $end : $day->copy()->endOfDay();
+
+            if ($effectiveStart->lt($effectiveEnd)) {
+                $totalMinutes += (int) $effectiveStart->diffInMinutes($effectiveEnd);
+            }
         }
 
         return $totalMinutes;

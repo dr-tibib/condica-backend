@@ -73,9 +73,9 @@ class PresenceController extends Controller
             ], 200);
         }
 
-        $latestEvent = $employee->latestPresenceEvent;
+        $activeEvent = $employee->presenceEvents()->active()->latest('start_at')->first();
 
-        if (! $latestEvent) {
+        if (! $activeEvent) {
             return response()->json([
                 'is_present' => false,
                 'latest_event' => null,
@@ -84,17 +84,13 @@ class PresenceController extends Controller
             ], 200);
         }
 
-        $isPresent = $latestEvent->event_type === 'check_in';
-        $currentWorkplace = $isPresent ? $employee->getCurrentWorkplace() : null;
-        $durationMinutes = null;
-
-        if ($isPresent && $latestEvent->event_time) {
-            $durationMinutes = (int) $latestEvent->event_time->diffInMinutes(now());
-        }
+        $isPresent = ($activeEvent->type === 'presence');
+        $currentWorkplace = $activeEvent->workplace;
+        $durationMinutes = (int) $activeEvent->start_at->diffInMinutes(now());
 
         return response()->json([
             'is_present' => $isPresent,
-            'latest_event' => new PresenceEventResource($latestEvent->load('workplace')),
+            'latest_event' => new PresenceEventResource($activeEvent->load('workplace')),
             'current_workplace' => $currentWorkplace ? $currentWorkplace->name : null,
             'duration_minutes' => $durationMinutes,
         ], 200);
@@ -113,7 +109,7 @@ class PresenceController extends Controller
         $events = $employee
             ->presenceEvents()
             ->with('workplace')
-            ->orderBy('event_time', 'desc')
+            ->orderBy('start_at', 'desc')
             ->paginate(20);
 
         return PresenceEventResource::collection($events);
@@ -132,34 +128,21 @@ class PresenceController extends Controller
 
         $events = $employee->presenceEvents()
             ->with('workplace')
-            ->whereDate('event_time', today())
-            ->orderBy('event_time', 'asc')
+            ->whereDate('start_at', today())
+            ->orderBy('start_at', 'asc')
             ->get();
 
         $totalMinutes = $employee->getTodayMinutes();
 
         $sessions = [];
-        $currentCheckIn = null;
 
         foreach ($events as $event) {
-            if ($event->event_type === 'check_in') {
-                $currentCheckIn = $event;
-            } elseif ($event->event_type === 'check_out' && $currentCheckIn) {
-                $sessions[] = [
-                    'check_in' => new PresenceEventResource($currentCheckIn),
-                    'check_out' => new PresenceEventResource($event),
-                    'duration_minutes' => $currentCheckIn->event_time->diffInMinutes($event->event_time),
-                ];
-                $currentCheckIn = null;
-            }
-        }
-
-        // If there's an ongoing session (checked in but not checked out)
-        if ($currentCheckIn) {
             $sessions[] = [
-                'check_in' => new PresenceEventResource($currentCheckIn),
-                'check_out' => null,
-                'duration_minutes' => $currentCheckIn->event_time->diffInMinutes(now()),
+                'event' => new PresenceEventResource($event),
+                'type' => $event->type,
+                'start_at' => $event->start_at->toDateTimeString(),
+                'end_at' => $event->end_at ? $event->end_at->toDateTimeString() : null,
+                'duration_minutes' => $event->end_at ? $event->start_at->diffInMinutes($event->end_at) : $event->start_at->diffInMinutes(now()),
             ];
         }
 

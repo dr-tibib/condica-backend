@@ -27,11 +27,12 @@ Route::group([
     Route::crud('leave-request', 'LeaveRequestCrudController');
     Route::get('team-command-center/export', 'TeamCommandCenterController@generateAttendanceSheet');
     Route::crud('team-command-center', 'TeamCommandCenterController');
-    Route::get('dashboard', 'EmployeeDashboardController@dashboard')->name('backpack.dashboard');
+    Route::get('dashboard', 'DashboardController@index')->name('backpack.dashboard');
     Route::crud('vehicle', 'VehicleCrudController');
     Route::crud('delegation-place', 'DelegationPlaceCrudController');
     Route::crud('delegation', 'DelegationCrudController');
     Route::crud('employee', 'EmployeeCrudController');
+    Route::crud('domain', 'DomainCrudController');
 }); // this should be the absolute last line of this file
 
 /**

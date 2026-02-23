@@ -46,15 +46,17 @@ class EmployeeDashboardController extends AdminController
 
         // Logged Hours
         $monthEvents = $employee->presenceEvents()
-            ->whereBetween('event_time', [$startOfMonth, $now])
-            ->orderBy('event_time')
+            ->where(function($query) use ($startOfMonth, $now) {
+                $query->whereBetween('start_at', [$startOfMonth, $now])
+                      ->orWhereBetween('end_at', [$startOfMonth, $now]);
+            })
+            ->orderBy('start_at')
             ->get();
 
         $loggedMinutes = $this->calculateMinutesFromEvents($monthEvents);
         $loggedHours = round($loggedMinutes / 60, 1);
 
         // Expected Hours
-        // Assume 8h per weekday
         $workingDaysInMonth = 0;
         $workingDaysToDate = 0;
 
@@ -65,8 +67,6 @@ class EmployeeDashboardController extends AdminController
                 if ($date->lt($now->startOfDay())) {
                     $workingDaysToDate++;
                 } elseif ($date->isToday()) {
-                    // For today, we can count it as expected or partially expected.
-                    // Let's count it as fully expected for the "Goal" logic usually.
                     $workingDaysToDate++;
                 }
             }
@@ -78,7 +78,6 @@ class EmployeeDashboardController extends AdminController
         // Overtime Balance
         $overtimeHours = $loggedHours - $expectedHoursToDate;
 
-        // Completion Projection (Frontend will use percentages)
         $monthProgressPct = $expectedHoursMonth > 0 ? ($loggedHours / $expectedHoursMonth) * 100 : 0;
         $targetProgressPct = $expectedHoursMonth > 0 ? ($expectedHoursToDate / $expectedHoursMonth) * 100 : 0;
 
@@ -93,39 +92,44 @@ class EmployeeDashboardController extends AdminController
         // --------------------------
         // 2. Recent Activity
         // --------------------------
-        // Get events from last 5 days
         $recentStart = Carbon::today()->subDays(4);
         $recentEvents = $employee->presenceEvents()
-            ->where('event_time', '>=', $recentStart)
-            ->orderBy('event_time', 'desc')
+            ->where('start_at', '>=', $recentStart)
+            ->orderBy('start_at', 'desc')
             ->get()
             ->groupBy(function($event) {
-                return $event->event_time->format('Y-m-d');
+                return $event->start_at->format('Y-m-d');
             });
 
         $activityLog = [];
         foreach ($recentEvents as $dateStr => $events) {
-            // Sort ascending for calculation
-            $sortedEvents = $events->sortBy('event_time');
-            $dailyMinutes = $this->calculateMinutesFromEvents($sortedEvents);
+            $sortedEvents = $events->sortBy('start_at');
+            $dailyMinutes = 0;
+            foreach ($sortedEvents as $event) {
+                if ($event->end_at) {
+                    $dailyMinutes += (int) $event->start_at->diffInMinutes($event->end_at);
+                } elseif ($event->start_at->isToday()) {
+                    $dailyMinutes += (int) $event->start_at->diffInMinutes(now());
+                }
+            }
 
-            // Determine shift details (first in - last out)
-            $firstIn = $sortedEvents->first(fn($e) => $e->isCheckIn());
-            $lastOut = $sortedEvents->last(fn($e) => $e->isCheckOut());
+            $firstEvent = $sortedEvents->first();
+            $lastEventWithEnd = $sortedEvents->filter(fn($e) => $e->end_at)->last();
+            $hasOngoing = $sortedEvents->contains(fn($e) => !$e->end_at && $e->start_at->isToday());
 
             $isRemote = false;
             $locationName = 'Office';
 
-            if ($firstIn) {
-                if ($firstIn->isDelegationStart()) {
+            if ($firstEvent) {
+                if ($firstEvent->type === 'delegation') {
                     $isRemote = true;
                     $locationName = 'Delegation';
-                } elseif ($firstIn->workplace) {
-                    $locationName = $firstIn->workplace->name;
-                    if (stripos($firstIn->workplace->name, 'Home') !== false || stripos($firstIn->workplace->name, 'Remote') !== false) {
+                } elseif ($firstEvent->workplace) {
+                    $locationName = $firstEvent->workplace->name;
+                    if (stripos($firstEvent->workplace->name, 'Home') !== false || stripos($firstEvent->workplace->name, 'Remote') !== false) {
                         $isRemote = true;
                     }
-                } elseif (!$firstIn->workplace_id) {
+                } elseif (!$firstEvent->workplace_id) {
                     $isRemote = true;
                     $locationName = 'Remote';
                 }
@@ -135,8 +139,8 @@ class EmployeeDashboardController extends AdminController
                 'date' => Carbon::parse($dateStr),
                 'minutes' => $dailyMinutes,
                 'hours_str' => floor($dailyMinutes / 60) . 'h ' . ($dailyMinutes % 60) . 'm',
-                'start_time' => $firstIn ? $firstIn->event_time->format('H:i') : '-',
-                'end_time' => $lastOut ? $lastOut->event_time->format('H:i') : (Carbon::parse($dateStr)->isToday() ? 'Now' : '-'),
+                'start_time' => $firstEvent ? $firstEvent->start_at->format('H:i') : '-',
+                'end_time' => $hasOngoing ? 'Now' : ($lastEventWithEnd ? $lastEventWithEnd->end_at->format('H:i') : '-'),
                 'is_remote' => $isRemote,
                 'location_name' => $locationName,
             ];
@@ -167,17 +171,13 @@ class EmployeeDashboardController extends AdminController
     private function calculateMinutesFromEvents($events)
     {
         $totalMinutes = 0;
-        $currentCheckIn = null;
-
         foreach ($events as $event) {
-            if ($event->isCheckIn()) {
-                $currentCheckIn = $event;
-            } elseif ($event->isCheckOut() && $currentCheckIn !== null) {
-                $totalMinutes += (int) $currentCheckIn->event_time->diffInMinutes($event->event_time);
-                $currentCheckIn = null;
+            if ($event->end_at) {
+                $totalMinutes += (int) $event->start_at->diffInMinutes($event->end_at);
+            } elseif ($event->start_at->isToday()) {
+                $totalMinutes += (int) $event->start_at->diffInMinutes(now());
             }
         }
-
         return $totalMinutes;
     }
 }

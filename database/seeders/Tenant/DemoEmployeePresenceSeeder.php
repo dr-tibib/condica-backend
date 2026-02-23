@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Tenant;
 
+use App\Models\Employee;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
@@ -36,22 +37,16 @@ class DemoEmployeePresenceSeeder extends Seeder
             ]
         );
 
-        // 2. Get Leave Type (Concediu Odihna)
+        // 2. Get Leave Type
         $leaveType = LeaveType::where('name', 'like', '%Concediu%Odihn%')
             ->orWhere('id', 1)
             ->first();
-
-        if (! $leaveType) {
-            $this->command->error("Leave Type 'Concediu Odihna' not found. Please run LeaveManagementSeeder first.");
-            return;
-        }
 
         // 3. Create 20 Employees
         $password = Hash::make('qazwsx');
         $startDate = now()->subMonths(3)->startOfDay();
         $endDate = now()->endOfDay();
 
-        // Pre-fetch holidays to avoid queries in loop
         $holidays = PublicHoliday::whereBetween('date', [$startDate, $endDate])
             ->get()
             ->pluck('date')
@@ -59,52 +54,38 @@ class DemoEmployeePresenceSeeder extends Seeder
             ->toArray();
 
         for ($i = 0; $i < 20; $i++) {
-            $user = User::factory()->create([
-                'password' => $password,
-                'default_workplace_id' => $workplace->id,
+            $user = User::factory()->create(['password' => $password]);
+            $employee = Employee::factory()->create([
+                'user_id' => $user->id,
+                'workplace_id' => $workplace->id
             ]);
 
-            // Create Leave Balances for current and previous year (to cover 3 months ago)
             $years = array_unique([$startDate->year, $endDate->year]);
             foreach ($years as $year) {
                 LeaveBalance::firstOrCreate(
-                    ['user_id' => $user->id, 'year' => $year],
-                    [
-                        'total_entitlement' => 50, // Generous amount for demo
-                        'carried_over' => 0,
-                        'taken' => 0,
-                    ]
+                    ['employee_id' => $employee->id, 'year' => $year],
+                    ['total_entitlement' => 50, 'carried_over' => 0, 'taken' => 0]
                 );
             }
 
-            // 4. Generate Presence/Leaves
             $currentDate = $startDate->copy();
 
             while ($currentDate <= $endDate) {
-                // Skip future days if any (though loop checks endDate)
-                if ($currentDate->isFuture()) {
-                    break;
-                }
-
-                // Skip Weekends
+                if ($currentDate->isFuture()) break;
                 if ($currentDate->isWeekend()) {
                     $currentDate->addDay();
                     continue;
                 }
-
-                // Skip Public Holidays
                 if (in_array($currentDate->format('Y-m-d'), $holidays)) {
                     $currentDate->addDay();
                     continue;
                 }
 
-                // Random decision: 10% Leave, 90% Presence
                 $rand = rand(1, 100);
 
-                if ($rand <= 10) {
-                    // Create Leave Request
+                if ($rand <= 10 && $leaveType) {
                     LeaveRequest::create([
-                        'user_id' => $user->id,
+                        'employee_id' => $employee->id,
                         'leave_type_id' => $leaveType->id,
                         'start_date' => $currentDate->format('Y-m-d'),
                         'end_date' => $currentDate->format('Y-m-d'),
@@ -112,61 +93,38 @@ class DemoEmployeePresenceSeeder extends Seeder
                         'status' => 'APPROVED',
                     ]);
                 } else {
-                    // Create Presence
-                    // Determine Hours
                     $scenario = rand(1, 100);
-                    $durationMinutes = 480; // 8 hours default
+                    $durationMinutes = 480;
+                    if ($scenario <= 60) $durationMinutes = 480 + rand(-10, 10);
+                    elseif ($scenario <= 80) $durationMinutes = rand(540, 600);
+                    else $durationMinutes = rand(240, 420);
 
-                    if ($scenario <= 60) {
-                        // Standard: ~8h (plus minus random minutes)
-                        $durationMinutes = 480 + rand(-10, 10);
-                    } elseif ($scenario <= 80) {
-                        // Overtime: 9-10h
-                        $durationMinutes = rand(540, 600);
-                    } else {
-                        // Undertime: 4-7h
-                        $durationMinutes = rand(240, 420);
-                    }
-
-                    // Start Time: 08:00 - 10:00
                     $startHour = rand(8, 10);
                     $startMinute = rand(0, 59);
                     $checkInTime = $currentDate->copy()->setTime($startHour, $startMinute);
                     $checkOutTime = $checkInTime->copy()->addMinutes($durationMinutes);
 
-                    // Jitter location
                     $lat = $workplace->latitude + (rand(-100, 100) / 100000);
                     $lng = $workplace->longitude + (rand(-100, 100) / 100000);
 
-                    $checkIn = PresenceEvent::create([
-                        'user_id' => $user->id,
+                    PresenceEvent::create([
+                        'employee_id' => $employee->id,
                         'workplace_id' => $workplace->id,
-                        'event_type' => 'check_in',
-                        'event_time' => $checkInTime,
-                        'method' => 'manual',
-                        'latitude' => $lat,
-                        'longitude' => $lng,
-                        'accuracy' => rand(10, 50),
-                        'device_info' => ['agent' => 'Seeder'],
+                        'type' => 'presence',
+                        'start_at' => $checkInTime,
+                        'end_at' => $checkOutTime,
+                        'start_method' => 'manual',
+                        'end_method' => 'manual',
+                        'start_latitude' => $lat,
+                        'start_longitude' => $lng,
+                        'end_latitude' => $lat,
+                        'end_longitude' => $lng,
+                        'start_accuracy' => rand(10, 50),
+                        'end_accuracy' => rand(10, 50),
+                        'start_device_info' => ['agent' => 'Seeder'],
+                        'end_device_info' => ['agent' => 'Seeder'],
                     ]);
-
-                    $checkOut = PresenceEvent::create([
-                        'user_id' => $user->id,
-                        'workplace_id' => $workplace->id,
-                        'event_type' => 'check_out',
-                        'event_time' => $checkOutTime,
-                        'method' => 'manual',
-                        'latitude' => $lat, // Assuming didn't move much
-                        'longitude' => $lng,
-                        'accuracy' => rand(10, 50),
-                        'device_info' => ['agent' => 'Seeder'],
-                        'pair_event_id' => $checkIn->id,
-                    ]);
-
-                    // Link checkin to checkout
-                    $checkIn->update(['pair_event_id' => $checkOut->id]);
                 }
-
                 $currentDate->addDay();
             }
         }

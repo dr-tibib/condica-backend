@@ -1,0 +1,49 @@
+name: AI Autonomous QA Run
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  qa-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, sqlite3
+          tools: composer:v2
+
+      - name: Install Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+      - name: Setup Environment
+        run: |
+          cp .env.example .env
+          echo "127.0.0.1 oaksoft.test" | sudo tee -a /etc/hosts
+          mkdir -p database
+          touch database/central_test.sqlite
+          touch database/oaksoft_test.sqlite
+
+      - name: Start Chrome Driver
+        run: |
+          php artisan dusk:chrome-driver --detect
+          ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
+
+      - name: Start Laravel Server
+        run: php artisan serve --host=oaksoft.test --port=8000 &
+
+      - name: Run AI QA Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          APP_URL: http://oaksoft.test:8000
+        run: php artisan ai:qa-agent
+
+      - name: Upload QA Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-qa-reports
+          path: tests/AI/reports/

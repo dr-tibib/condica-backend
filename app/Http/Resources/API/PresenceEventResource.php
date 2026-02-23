@@ -18,20 +18,28 @@ class PresenceEventResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user_id' => $this->user_id,
+            'employee_id' => $this->employee_id,
             'workplace_id' => $this->workplace_id,
             'workplace' => new WorkplaceResource($this->whenLoaded('workplace')),
-            'event_type' => $this->event_type,
-            'event_time' => $this->event_time->toIso8601String(),
-            'method' => $this->method,
-            'location' => [
-                'latitude' => $this->latitude,
-                'longitude' => $this->longitude,
-                'accuracy' => $this->accuracy,
+            'type' => $this->type,
+            'start_at' => $this->start_at->toIso8601String(),
+            'end_at' => $this->end_at ? $this->end_at->toIso8601String() : null,
+            'start_method' => $this->start_method,
+            'end_method' => $this->end_method,
+            'start_location' => [
+                'latitude' => $this->start_latitude,
+                'longitude' => $this->start_longitude,
+                'accuracy' => $this->start_accuracy,
+            ],
+            'end_location' => [
+                'latitude' => $this->end_latitude,
+                'longitude' => $this->end_longitude,
+                'accuracy' => $this->end_accuracy,
             ],
             'notes' => $this->notes,
-            'pair_event_id' => $this->pair_event_id,
-            'duration_minutes' => $this->when($this->pair_event_id !== null, fn () => $this->getDurationMinutes()),
+            'linkable_id' => $this->linkable_id,
+            'linkable_type' => $this->linkable_type,
+            'duration_minutes' => $this->getDurationMinutes(),
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

@@ -14,6 +14,7 @@ use App\Models\PresenceEvent;
 use App\Models\PublicHoliday;
 use App\Models\Vehicle;
 use App\Services\PresenceService;
+use App\Services\GooglePlacesService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,7 +22,8 @@ use Illuminate\Support\Facades\Log;
 class KioskController extends Controller
 {
     public function __construct(
-        private readonly PresenceService $presenceService
+        private readonly PresenceService $presenceService,
+        private readonly GooglePlacesService $googlePlacesService
     ) {}
 
     public function getVehicles(): JsonResponse
@@ -38,81 +40,58 @@ class KioskController extends Controller
         ]);
     }
 
-    public function getAllEmployeesStatus(): JsonResponse
+    public function searchPlaces(Request $request): JsonResponse
     {
-        $employees = Employee::with([
-            'latestCheckinCheckoutPresenceEvent',
-            'latestPresenceEvent',
-            'leaveRequests' => function ($query) {
-                $query->where('status', 'APPROVED')
-                      ->whereDate('start_date', '<=', now())
-                      ->whereDate('end_date', '>=', now());
-            },
-            'delegations' => function ($query) {
-                 $query->whereHas('startEvent', function ($q) {
-                    $q->whereNull('pair_event_id');
-                });
-            }
-        ])
-        ->orderBy('first_name')
-        ->orderBy('last_name')
-        ->get()
-        ->map(function ($employee) {
-            $status = 'absent';
-            $details = null;
+        $query = $request->query('query');
+        if (empty($query)) {
+            return response()->json(['data' => []]);
+        }
 
-            // Check Leave
-            if ($employee->leaveRequests->isNotEmpty()) {
-                $status = 'leave';
-                $details = 'Concediu până la ' . $employee->leaveRequests->first()->end_date->format('d.m');
-            }
-            // Check Delegation
-            elseif ($employee->delegations->isNotEmpty()) {
-                $status = 'delegation';
-                $delegation = $employee->delegations->first();
-                $destination = $delegation->delegationPlace ? $delegation->delegationPlace->name : ($delegation->address ?? $delegation->name ?? 'Delegatie');
-                $details = $destination;
-            }
-            // Check Present
-            elseif ($employee->isCurrentlyPresent()) {
-                $status = 'present';
-                $lastEvent = $employee->latestCheckinCheckoutPresenceEvent;
-                $details = 'Prezent de la ' . ($lastEvent ? $lastEvent->event_time->format('H:i') : '-');
-            }
-
-            return [
-                'id' => $employee->id,
-                'name' => $employee->name,
-                'avatar' => $employee->avatar_url,
-                'status' => $status,
-                'details' => $details,
-            ];
-        });
-
+        $result = $this->googlePlacesService->searchPlace($query);
+        
         return response()->json([
-            'data' => $employees,
+            'data' => $result ? [$result] : [],
         ]);
     }
 
     public function getDashboardData(): JsonResponse
     {
-        // 1. Latest Logins
-        $latestLogins = PresenceEvent::with('employee')
-            ->whereIn('event_type', ['check_in', 'check_out', 'delegation_start', 'delegation_end'])
-            ->orderBy('event_time', 'desc')
-            ->take(20)
-            ->get()
-            ->map(function ($event) {
-                return [
-                    'id' => $event->id,
-                    'employee' => $event->employee->name ?? 'Unknown',
-                    'time' => $event->event_time->format('H:i'),
-                    'type' => $event->event_type,
-                ];
-            });
+        $events = PresenceEvent::with(['employee', 'workplace'])
+            ->orderByRaw('COALESCE(end_at, start_at) DESC')
+            ->take(30)
+            ->get();
 
-        // 2. On Leave
-        $onLeave = LeaveRequest::with('employee')
+        $latestLogins = [];
+        foreach ($events as $event) {
+            $latestLogins[] = [
+                'id' => $event->id . '_start',
+                'employee' => $event->employee->name ?? 'Unknown',
+                'avatar' => $event->employee->avatar_url ?? null,
+                'time' => $event->start_at->format('H:i'),
+                'date' => $event->start_at->format('d.m.Y'),
+                'type' => $event->type === 'delegation' ? 'delegation_start' : 'check_in',
+                'workplace' => $event->workplace->name ?? 'External',
+                'timestamp' => $event->start_at->timestamp,
+            ];
+
+            if ($event->end_at) {
+                $latestLogins[] = [
+                    'id' => $event->id . '_end',
+                    'employee' => $event->employee->name ?? 'Unknown',
+                    'avatar' => $event->employee->avatar_url ?? null,
+                    'time' => $event->end_at->format('H:i'),
+                    'date' => $event->end_at->format('d.m.Y'),
+                    'type' => $event->type === 'delegation' ? 'delegation_end' : 'check_out',
+                    'workplace' => $event->workplace->name ?? 'External',
+                    'timestamp' => $event->end_at->timestamp,
+                ];
+            }
+        }
+
+        usort($latestLogins, fn($a, $b) => $b['timestamp'] <=> $a['timestamp']);
+        $latestLogins = array_slice($latestLogins, 0, 20);
+
+        $onLeave = LeaveRequest::with(['employee', 'leaveType'])
             ->where('status', 'APPROVED')
             ->whereDate('start_date', '<=', now())
             ->whereDate('end_date', '>=', now())
@@ -121,38 +100,43 @@ class KioskController extends Controller
                 return [
                     'id' => $leave->id,
                     'employee' => $leave->employee->name ?? 'Unknown',
+                    'avatar' => $leave->employee->avatar_url ?? null,
                     'until' => $leave->end_date->format('d.m.Y'),
+                    'type' => $leave->leaveType->name ?? 'Concediu',
                 ];
             });
 
-        // 3. Active Delegations
-        $activeDelegationsQuery = Delegation::with(['employee', 'vehicle', 'delegationPlace'])
-            ->whereHas('startEvent', function ($query) {
-                $query->whereNull('pair_event_id');
-            });
-
-        $activeDelegationsCount = $activeDelegationsQuery->count();
-
-        $activeDelegations = $activeDelegationsQuery->get()
+        $activeDelegations = Delegation::with(['employee', 'vehicle', 'stops', 'presenceEvent'])
+            ->whereHas('presenceEvent', function ($query) {
+                $query->active();
+            })
+            ->get()
             ->map(function ($delegation) {
-                $destination = $delegation->delegationPlace ? $delegation->delegationPlace->name : ($delegation->address ?? $delegation->name);
+                $stops = $delegation->stops;
+                if ($stops->count() > 0) {
+                    $firstStop = $stops->first();
+                    $destination = $firstStop->name;
+                    if ($stops->count() > 1) {
+                        $destination .= ' +' . ($stops->count() - 1);
+                    }
+                } else {
+                    $destination = $delegation->name ?? 'External';
+                }
+
                 return [
                     'id' => $delegation->id,
                     'employee' => $delegation->employee->name ?? 'Unknown',
+                    'avatar' => $delegation->employee->avatar_url ?? null,
                     'destination' => $destination,
                     'vehicle' => $delegation->vehicle ? $delegation->vehicle->license_plate : '-',
+                    'since' => $delegation->presenceEvent->start_at->format('H:i'),
                 ];
             });
 
-        // 4. Counts
         $totalEmployees = Employee::count();
-
-        // Present Count
-        $presentCount = Employee::with('latestCheckinCheckoutPresenceEvent')->get()
-            ->filter(function ($employee) {
-                return $employee->isCurrentlyPresent();
-            })
-            ->count();
+        $presentCount = Employee::whereHas('presenceEvents', function ($q) {
+            $q->where('type', 'presence')->active();
+        })->count();
 
         return response()->json([
             'latest_logins' => $latestLogins,
@@ -161,273 +145,148 @@ class KioskController extends Controller
             'stats' => [
                 'total_employees' => $totalEmployees,
                 'present_count' => $presentCount,
-                'active_delegations_count' => $activeDelegationsCount,
+                'active_delegations_count' => count($activeDelegations),
             ]
         ]);
     }
 
-    /**
-     * Verify code and perform check-in/check-out or return user details.
-     */
+    public function getAllEmployeesStatus(): JsonResponse
+    {
+        // Re-use logic if needed but dashboard data covers most now
+        return response()->json(['message' => 'Use getDashboardData instead']);
+    }
+
     public function submitCode(Request $request): JsonResponse
     {
-        // Get configured code length, default to 3
-        $tenantData = tenant()->data ?? [];
-        $codeLength = (int) ($tenantData['code_length'] ?? 3);
-
+        $codeLength = tenant('code_length') ?? 3;
         $validated = $request->validate([
-            'code' => ['required', 'string', "digits:{$codeLength}"],
-            'flow' => ['nullable', 'string', 'in:regular,delegation,concediu'],
-            'workplace_id' => ['nullable', 'exists:workplaces,id'],
+            'code' => ['required', 'string', 'max:' . $codeLength],
+            'flow' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['regular', 'delegation', 'leave'])],
+            'workplace_id' => ['nullable'],
             'device_info' => ['nullable', 'array'],
         ]);
 
-        $code = $validated['code'];
-        $flow = $validated['flow'] ?? 'regular';
+        $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
+        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
 
-        $employee = Employee::where('workplace_enter_code', $code)->first();
-
-        if (! $employee) {
-            return response()->json([
-                'message' => 'Invalid code.',
-            ], 404);
-        }
-
-        if ($flow === 'delegation' || $flow === 'concediu') {
-            $latestEvent = $employee->latestPresenceEvent;
-            $isDelegated = $latestEvent && $latestEvent->isDelegationStart();
-
-            if ($flow === 'delegation' && $isDelegated) {
-                return $this->handleDelegationEnd($employee, $validated['device_info'] ?? null);
-            }
-
-            return response()->json([
-                'message' => 'User verified.',
-                'employee' => [
-                    'id' => $employee->id,
-                    'name' => $employee->name,
-                    'email' => $employee->email,
-                    'default_workplace_id' => $employee->workplace_id,
-                ],
-                'is_delegated' => $isDelegated,
-                'current_delegation' => $isDelegated ? $latestEvent : null,
-            ]);
-        }
-
-        // Regular flow: Check In / Check Out
         try {
-            $latestEvent = $employee->latestPresenceEvent;
-            $isDelegated = $latestEvent && $latestEvent->isDelegationStart();
-
-            if ($isDelegated) {
-                return $this->handleDelegationEnd($employee, $validated['device_info'] ?? null);
-            } elseif ($employee->isCurrentlyPresent()) {
-                // Check Out
-                $event = $this->presenceService->checkOut($employee, [
-                    'method' => 'kiosk',
-                    'device_info' => $validated['device_info'] ?? null,
-                ]);
-                $message = 'Checked out successfully.';
-                $type = 'checkout';
-            } else {
-                // Check In
-                $workplaceId = $validated['workplace_id'] ?? $employee->workplace_id;
-
-                if (! $workplaceId) {
-                     return response()->json([
-                        'message' => 'No workplace configured for this check-in.',
-                    ], 400);
-                }
-
-                $event = $this->presenceService->checkIn($employee, [
-                    'workplace_id' => $workplaceId,
-                    'method' => 'kiosk',
-                    'device_info' => $validated['device_info'] ?? null,
-                ]);
-                $message = 'Checked in successfully.';
-                $type = 'checkin';
-            }
-
-            return response()->json([
-                'message' => $message,
-                'type' => $type,
-                'employee' => [
-                    'name' => $employee->name,
-                ],
-                'time' => $event->event_time->format('g:i A'),
-                'event' => $event,
-            ]);
-
+            return response()->json($this->presenceService->processKioskFlow($employee, $validated['flow'] ?? 'regular', $validated));
         } catch (\Exception $e) {
-            Log::error('Kiosk check-in/out error: ' . $e->getMessage());
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 400);
+            return response()->json(['message' => $e->getMessage()], 400);
         }
     }
 
-    public function storeLeaveRequest(Request $request): JsonResponse
-    {
-        // Get configured code length, default to 3
-        $tenantData = tenant()->data ?? [];
-        $codeLength = (int) ($tenantData['code_length'] ?? 3);
-
-        $validated = $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
-            'code' => ['required', 'string', "digits:{$codeLength}"],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-        ]);
-
-        $employee = Employee::find($validated['employee_id']);
-
-        if ($employee->workplace_enter_code !== $validated['code']) {
-            return response()->json(['message' => 'Invalid code.'], 403);
-        }
-
-        // Find default leave type (e.g. Concediu de Odihna)
-        $leaveType = LeaveType::where('affects_annual_quota', true)->first()
-            ?? LeaveType::first();
-
-        if (!$leaveType) {
-            return response()->json(['message' => 'No leave types configured.'], 500);
-        }
-
-        // Calculate total days (naive implementation, manager can adjust)
-        $start = \Carbon\Carbon::parse($validated['start_date']);
-        $end = \Carbon\Carbon::parse($validated['end_date']);
-        $diff = $start->diffInDays($end) + 1;
-
-        $leaveRequest = LeaveRequest::create([
-            'employee_id' => $validated['employee_id'],
-            'leave_type_id' => $leaveType->id,
-            'start_date' => $validated['start_date'],
-            'end_date' => $validated['end_date'],
-            'total_days' => $diff,
-            'status' => 'APPROVED',
-        ]);
-
-        return response()->json([
-            'message' => 'Leave request created successfully.',
-            'data' => $leaveRequest,
-        ]);
-    }
-          
     public function endDelegationWithSchedule(Request $request): JsonResponse
     {
-        // Get configured code length, default to 3
-        $tenantData = tenant()->data ?? [];
-        $codeLength = (int) ($tenantData['code_length'] ?? 3);
-
         $validated = $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
+            'code' => ['required', 'string'],
             'schedule' => ['required', 'array'],
-            'schedule.*.date' => ['required', 'date_format:Y-m-d'],
-            'schedule.*.start_time' => ['required', 'date_format:H:i'],
-            'schedule.*.end_time' => ['required', 'date_format:H:i'],
-            'code' => ['required', 'string', "digits:{$codeLength}"],
+            'next_step' => ['nullable', 'string'],
         ]);
 
-        $employee = Employee::findOrFail($validated['employee_id']);
-
-        if ($employee->workplace_enter_code !== $validated['code']) {
-            return response()->json([
-                'message' => 'Invalid code.',
-            ], 403);
-        }
+        $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
+        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
 
         try {
             $this->presenceService->endDelegationWithSchedule($employee, $validated['schedule']);
 
-            return response()->json([
-                'message' => 'Delegation ended successfully.',
-                'type' => 'delegation_end',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    private function handleDelegationEnd(Employee $employee, ?array $deviceInfo): JsonResponse
-    {
-        $latestEvent = $employee->latestPresenceEvent;
-
-        // Check duration for long delegations
-        $start = $latestEvent->event_time;
-        $now = now();
-        $durationHours = $start->diffInHours($now);
-
-        if ($durationHours > 24) {
-            // Fetch Shift Settings
-            $shiftStart = \Backpack\Settings\app\Models\Setting::get('shift_start') ?? '08:00';
-            $shiftEnd = \Backpack\Settings\app\Models\Setting::get('shift_end') ?? '17:00';
-
-            // Generate Dates
-            $dates = [];
-            $period = \Carbon\CarbonPeriod::create($start->copy()->startOfDay(), '1 day', $now->copy()->startOfDay());
-
-            $holidays = PublicHoliday::whereBetween('date', [$start->copy()->startOfDay(), $now->copy()->startOfDay()])
-                ->get()
-                ->map(fn($h) => $h->date->format('Y-m-d'))
-                ->toArray();
-
-            foreach ($period as $date) {
-                // Skip weekends and holidays
-                if ($date->isWeekend() || in_array($date->format('Y-m-d'), $holidays)) {
-                    continue;
+            // If next_step is provided, simulate the flow for that step
+            if (!empty($validated['next_step'])) {
+                if ($validated['next_step'] === 'regular') {
+                    return response()->json([
+                        'type' => 'checkin',
+                        'message' => 'Delegația a fost încheiată. Acum ești înregistrat la locul de muncă.',
+                        'employee' => $employee,
+                        'time' => now()->format('H:i')
+                    ]);
                 }
-
-                $d = $date->format('Y-m-d');
-                $defaultStart = $shiftStart;
-                $defaultEnd = $shiftEnd;
-
-                if ($date->isSameDay($start)) {
-                    $defaultStart = $start->format('H:i');
-                }
-                if ($date->isSameDay($now)) {
-                    $defaultEnd = $now->format('H:i');
-                }
-
-                $dates[] = [
-                    'date' => $d,
-                    'start' => $defaultStart,
-                    'end' => $defaultEnd,
-                ];
+                return response()->json(
+                    $this->presenceService->processKioskFlow($employee, $validated['next_step'], ['code' => $validated['code']])
+                );
             }
 
-            return response()->json([
-                'message' => 'Delegation spans multiple days.',
-                'type' => 'delegation_end_schedule_required',
-                'employee' => [
-                    'name' => $employee->name,
-                    'id' => $employee->id,
-                ],
-                'delegation_start_time' => $start->format('Y-m-d H:i:s'),
-                'schedule_days' => $dates,
-                'shift_settings' => [
-                    'start' => $shiftStart,
-                    'end' => $shiftEnd,
-                ],
-            ]);
+            return response()->json(['type' => 'success', 'message' => 'Delegation ended successfully.']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
         }
-
-        // End delegation normal flow
-        $event = $this->presenceService->delegationEndOnly($employee, [
-            'method' => 'kiosk',
-            'device_info' => $deviceInfo,
-        ]);
-
-        return response()->json([
-            'message' => 'Delegation ended successfully.',
-            'type' => 'delegation_end',
-            'employee' => [
-                'name' => $employee->name,
-            ],
-            'time' => $event->event_time->format('g:i A'),
-            'event' => $event,
-        ]);
     }
 
+    public function handleLateStart(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string'],
+            'action' => ['required', 'in:start,end'],
+            'time' => ['required', 'string', 'date_format:H:i'],
+            'workplace_id' => ['required', 'exists:workplaces,id'],
+        ]);
+
+        $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
+        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
+
+        try {
+            $result = $this->presenceService->processLateStart($employee, $validated);
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function handleShiftCorrection(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string'],
+            'timeline' => ['required', 'array'],
+            'timeline.*.date' => ['required', 'date_format:Y-m-d'],
+            'timeline.*.start' => ['required', 'date_format:H:i'],
+            'timeline.*.end' => ['required', 'date_format:H:i'],
+        ]);
+
+        $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
+        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
+
+        try {
+            $this->presenceService->correctShifts($employee, $validated['timeline']);
+            return response()->json(['type' => 'success', 'message' => 'Shifts corrected successfully.']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function cancelDelegation(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string'],
+            'presence_event_id' => ['required', 'exists:presence_events,id'],
+        ]);
+
+        $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
+        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
+
+        try {
+            $this->presenceService->cancelDelegation($employee, (int)$validated['presence_event_id']);
+            return response()->json(['type' => 'success', 'message' => 'Delegation cancelled. Previous shift resumed.']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function submitLeave(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'total_days' => ['required', 'numeric'],
+        ]);
+
+        $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
+        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
+
+        try {
+            $leave = $this->presenceService->startLeave($employee, $validated);
+            return response()->json(['type' => 'success', 'message' => 'Leave recorded.', 'leave' => $leave]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
 }

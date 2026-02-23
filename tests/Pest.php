@@ -1,5 +1,11 @@
 <?php
 
+pest()->extend(Tests\DuskTestCase::class)
+//  ->use(Illuminate\Foundation\Testing\DatabaseMigrations::class)
+    ->in('Browser');
+
+use App\Models\Tenant;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -45,7 +51,15 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+function getUrl(string $path): string
 {
-    // ..
+    $tenant = Tenant::first();
+    if (!$tenant) {
+        throw new \Exception("No tenant found for getUrl()");
+    }
+    $domain = $tenant->domains->first();
+    if (!$domain) {
+        throw new \Exception("No domain found for tenant in getUrl()");
+    }
+    return "http://{$domain->domain}{$path}";
 }
