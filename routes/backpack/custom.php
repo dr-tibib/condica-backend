@@ -33,6 +33,8 @@ Route::group([
     Route::crud('delegation', 'DelegationCrudController');
     Route::crud('employee', 'EmployeeCrudController');
     Route::crud('domain', 'DomainCrudController');
+    Route::get('employee-statistics/download-condica', 'EmployeeStatisticsController@downloadCondica');
+    Route::crud('employee-statistics', 'EmployeeStatisticsController');
 }); // this should be the absolute last line of this file
 
 /**

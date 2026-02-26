@@ -6,6 +6,8 @@ use App\Models\Employee;
 use App\Models\PresenceEvent;
 use App\Models\Delegation;
 use App\Models\DelegationStop;
+use App\Models\LeaveRequest;
+use App\Models\LeaveType;
 use App\Models\Tenant;
 use App\Models\Workplace;
 use Illuminate\Bus\Queueable;
@@ -15,6 +17,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class SyncOldCondicaJob implements ShouldQueue
@@ -23,14 +26,16 @@ class SyncOldCondicaJob implements ShouldQueue
 
     protected $tenantId;
     protected $startDate;
+    protected $shouldClean;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $tenantId, ?string $startDate = null)
+    public function __construct(string $tenantId, ?string $startDate = null, bool $shouldClean = true)
     {
         $this->tenantId = $tenantId;
         $this->startDate = !empty($startDate) ? $startDate : '2000-01-01 00:00:00';
+        $this->shouldClean = $shouldClean;
     }
 
     /**
@@ -47,6 +52,10 @@ class SyncOldCondicaJob implements ShouldQueue
 
         tenancy()->initialize($tenant);
 
+        if ($this->shouldClean) {
+            $this->cleanTenantData();
+        }
+
         // 1. Sync Employees
         Log::info("Syncing employees...");
         $this->syncEmployees();
@@ -55,6 +64,18 @@ class SyncOldCondicaJob implements ShouldQueue
         Log::info("Syncing attendance registry from " . ($this->startDate ?: 'null') . "...");
         $this->syncAttendance();
         Log::info("Sync completed for tenant: {$this->tenantId}");
+    }
+
+    private function cleanTenantData(): void
+    {
+        Log::info("Cleaning existing data for tenant {$this->tenantId}...");
+        Schema::disableForeignKeyConstraints();
+        PresenceEvent::truncate();
+        Delegation::truncate();
+        DelegationStop::truncate();
+        LeaveRequest::truncate();
+        Schema::enableForeignKeyConstraints();
+        Log::info("Data cleaned.");
     }
 
     private function syncEmployees(): void
@@ -95,7 +116,9 @@ class SyncOldCondicaJob implements ShouldQueue
                 $this->processRecord($record);
             }
             $processed += count($records);
-            Log::info("Processed {$processed} records...");
+            if ($processed % 1000 === 0) {
+                Log::info("Processed {$processed} records...");
+            }
         });
     }
 
@@ -110,31 +133,99 @@ class SyncOldCondicaJob implements ShouldQueue
         $employee = Employee::where('workplace_enter_code', $oldEmployee->LoginCode)->first();
         if (!$employee) return;
 
+        $logType = trim($record->LogType);
+        
+        // Determine primary type
         $type = 'presence';
-        if ($record->LogType === 'DELEGATION') {
-            $type = 'delegation';
-        } elseif (in_array($record->LogType, ['HOLIDAY', 'SICKLEAVE', 'PERMIT'])) {
-            $type = strtolower($record->LogType);
+        $leaveTypeName = null;
+
+        // Map Old LogTypes
+        switch (strtoupper($logType)) {
+            case 'DELEGATION':
+            case 'DELEGATIE':
+                $type = 'delegation';
+                break;
+            
+            case 'HOLIDAY':
+            case 'CONCEDIU':
+            case 'CONCEDIU 2025':
+            case 'CONCEDIU 2024':
+                $type = 'leave';
+                $leaveTypeName = 'Concediu Odihnă';
+                break;
+
+            case 'HOLIDAYPAST':
+                $type = 'leave';
+                $leaveTypeName = 'Concediu Vechi';
+                break;
+
+            case 'SICKLEAVE':
+            case 'CONCEDIU MEDICAL':
+                $type = 'leave';
+                $leaveTypeName = 'Concediu Medical';
+                break;
+
+            case 'PERMIT':
+            case 'INVOIRE':
+                $type = 'leave';
+                $leaveTypeName = 'Învoire';
+                break;
+            
+            case 'NONE':
+            case 'NORMAL':
+            case 'PRESENCE':
+                $type = 'presence';
+                break;
+
+            default:
+                $type = 'presence';
+                Log::warning("Unknown LogType: {$logType} for Employee {$employee->id}. Defaulting to presence.");
+                break;
         }
 
-        $event = PresenceEvent::updateOrCreate(
-            [
-                'employee_id' => $employee->id,
-                'start_at' => $record->LogInDate,
-            ],
-            [
-                'end_at' => $record->LogOutDate,
-                'type' => ($type === 'delegation' || $type === 'presence') ? $type : 'presence',
-                'notes' => $record->Comment . ($type !== 'delegation' && $type !== 'presence' ? " (Type: {$record->LogType})" : ""),
-                'workplace_id' => $employee->workplace_id,
-                'start_method' => 'sync',
-                'end_method' => 'sync',
-            ]
-        );
+        $event = PresenceEvent::create([
+            'employee_id' => $employee->id,
+            'start_at' => $record->LogInDate,
+            'end_at' => $record->LogOutDate,
+            'type' => $type,
+            'notes' => $record->Comment . ($type !== 'delegation' && $type !== 'presence' ? " (Source Type: {$logType})" : ""),
+            'workplace_id' => $employee->workplace_id,
+            'start_method' => 'sync',
+            'end_method' => 'sync',
+        ]);
 
         if ($type === 'delegation') {
             $this->createDelegation($event, $record);
+        } elseif ($type === 'leave' && $leaveTypeName) {
+            $this->createLeave($event, $record, $leaveTypeName);
         }
+    }
+
+    private function createLeave($event, $record, $leaveTypeName): void
+    {
+        $leaveType = LeaveType::firstOrCreate(['name' => $leaveTypeName]);
+
+        $startDate = Carbon::parse($event->start_at);
+        $endDate = $event->end_at ? Carbon::parse($event->end_at) : $startDate;
+
+        $totalDays = $startDate->diffInDays($endDate) + 1;
+
+        $leaveRequest = LeaveRequest::withoutEvents(function () use ($event, $leaveType, $startDate, $endDate, $totalDays, $leaveTypeName, $record) {
+            return LeaveRequest::create([
+                'employee_id' => $event->employee_id,
+                'leave_type_id' => $leaveType->id,
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+                'total_days' => $totalDays,
+                'reason' => $record->Comment ?? "Imported from Old Condica ($leaveTypeName)",
+                'status' => 'APPROVED',
+            ]);
+        });
+
+        $event->update([
+            'linkable_id' => $leaveRequest->id,
+            'linkable_type' => LeaveRequest::class,
+        ]);
     }
 
     private function createDelegation($event, $record): void

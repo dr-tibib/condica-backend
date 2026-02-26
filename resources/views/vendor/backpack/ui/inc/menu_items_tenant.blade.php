@@ -10,6 +10,7 @@
 <x-backpack::menu-dropdown title="Presence" icon="la la-map-marker">
     <x-backpack::menu-dropdown-item title="Workplace Presence" icon="la la-users" :link="backpack_url('workplace-presence')" />
     <x-backpack::menu-dropdown-item title="Presence events" icon="la la-history" :link="backpack_url('presence-event')" />
+    <x-backpack::menu-dropdown-item title="Employee Statistics" icon="la la-bar-chart" :link="backpack_url('employee-statistics')" />
 </x-backpack::menu-dropdown>
 
 <x-backpack::menu-dropdown title="Delegations" icon="la la-map-signs">

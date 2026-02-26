@@ -69,5 +69,11 @@ Controllers coordinate the flow between requests and services.
 - **Frontend**: React 19 (Web), Expo (Mobile Kiosk).
 - **Kiosk Hardware (v2)**: Touchscreen device with a dedicated physical **Numerical Keypad** only. UI must prioritize large touch targets and numerical-only data entry.
 - **Testing**: Pest (Backend), Vitest (Frontend).
-    - Run backend tests: `lando php vendor/bin/pest`.
-    - Run frontend tests: `npm test`.
+---
+
+## 6. VISUAL VERIFICATION (Hard Requirement)
+All UI changes, frontend features, and Backpack Admin customizations **MUST** be visually verified using `chrome-devtools` (browser automation) before completing the task.
+- **Login**: Always perform a complete login flow if authentication is required.
+- **Interactions**: Click buttons, fill forms, and trigger state changes to ensure logic behaves correctly in the browser.
+- **Theme**: Verify both Light and Dark modes where applicable (Kiosk v2 currently focuses on Light theme).
+- **Screenshots**: Take screenshots of the final state to confirm visual alignment with design standards.
