@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Channels\WhatsAppChannel;
 use Illuminate\Support\ServiceProvider;
+use Twilio\Rest\Client as TwilioClient;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +13,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(TwilioClient::class, function () {
+            return new TwilioClient(
+                config('services.twilio.sid'),
+                config('services.twilio.token')
+            );
+        });
+
+        $this->app->singleton(WhatsAppChannel::class, function ($app) {
+            return new WhatsAppChannel($app->make(TwilioClient::class));
+        });
     }
 
     /**

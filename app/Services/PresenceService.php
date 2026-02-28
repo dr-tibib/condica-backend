@@ -13,7 +13,6 @@ use App\Models\Workplace;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class PresenceService
 {
@@ -31,7 +30,7 @@ class PresenceService
             ->first();
 
         return DB::transaction(function () use ($employee, $flow, $data, $activePresence, $activeDelegation, $activeLeave) {
-            
+
             if ($flow === 'regular') {
                 return $this->handleNormalFlow($employee, $data, $activePresence, $activeDelegation, $activeLeave);
             }
@@ -85,7 +84,7 @@ class PresenceService
 
             return [
                 'event' => $event,
-                'time' => $event->start_at->format('g:i A')
+                'time' => $event->start_at->format('g:i A'),
             ];
         });
     }
@@ -93,15 +92,16 @@ class PresenceService
     private function handleNormalFlow(Employee $employee, array $data, ?PresenceEvent $activePresence, ?PresenceEvent $activeDelegation, ?LeaveRequest $activeLeave): array
     {
         if ($activeDelegation) {
-            if (!$activeDelegation->start_at->isSameDay(now())) {
+            if (! $activeDelegation->start_at->isSameDay(now())) {
                 return [
                     'type' => 'delegation_refinement_required',
                     'employee' => $employee,
                     'active_delegation' => $activeDelegation,
                     'next_step' => 'regular',
-                    'timeline' => $this->generateDelegationTimeline($activeDelegation, $employee)
+                    'timeline' => $this->generateDelegationTimeline($activeDelegation, $employee),
                 ];
             }
+
             return $this->endDelegationAndStartShift($employee, $data, $activeDelegation);
         }
 
@@ -110,12 +110,12 @@ class PresenceService
         }
 
         if ($activePresence) {
-            if (!$activePresence->start_at->isSameDay(now())) {
+            if (! $activePresence->start_at->isSameDay(now())) {
                 return [
                     'type' => 'correction_required',
                     'employee' => $employee,
                     'last_start' => $activePresence->start_at,
-                    'timeline' => $this->generateCorrectionTimeline($activePresence->start_at, now()->subDay())
+                    'timeline' => $this->generateCorrectionTimeline($activePresence->start_at, now()->subDay()),
                 ];
             }
 
@@ -128,20 +128,20 @@ class PresenceService
                 'type' => 'checkout',
                 'message' => 'Checked out successfully.',
                 'employee' => $employee,
-                'time' => now()->format('g:i A')
+                'time' => now()->format('g:i A'),
             ];
         }
 
         $workplaceId = $data['workplace_id'] ?? $employee->workplace_id;
         $workplace = Workplace::find($workplaceId);
         $threshold = $workplace ? $workplace->late_start_threshold : '16:00';
-        
+
         if (now()->format('H:i') >= $threshold) {
             return [
                 'type' => 'late_start_confirm',
                 'employee' => $employee,
                 'threshold' => $threshold,
-                'workplace_id' => $workplaceId
+                'workplace_id' => $workplaceId,
             ];
         }
 
@@ -157,7 +157,7 @@ class PresenceService
             'type' => 'checkin',
             'message' => 'Checked in successfully.',
             'employee' => $employee,
-            'time' => $event->start_at->format('g:i A')
+            'time' => $event->start_at->format('g:i A'),
         ];
     }
 
@@ -168,17 +168,17 @@ class PresenceService
                 return [
                     'type' => 'delegation_cancel_confirm',
                     'employee' => $employee,
-                    'active_delegation' => $activeDelegation
+                    'active_delegation' => $activeDelegation,
                 ];
             }
 
-            if (!$activeDelegation->start_at->isSameDay(now())) {
+            if (! $activeDelegation->start_at->isSameDay(now())) {
                 return [
                     'type' => 'delegation_refinement_required',
                     'employee' => $employee,
                     'active_delegation' => $activeDelegation,
                     'next_step' => 'delegation',
-                    'timeline' => $this->generateDelegationTimeline($activeDelegation, $employee)
+                    'timeline' => $this->generateDelegationTimeline($activeDelegation, $employee),
                 ];
             }
 
@@ -189,20 +189,20 @@ class PresenceService
             'type' => 'delegation_wizard',
             'employee' => $employee,
             'active_presence' => $activePresence,
-            'active_leave' => $activeLeave
+            'active_leave' => $activeLeave,
         ];
     }
 
     private function handleLeaveFlow(Employee $employee, array $data, ?PresenceEvent $activePresence, ?PresenceEvent $activeDelegation, ?LeaveRequest $activeLeave): array
     {
         if ($activeDelegation) {
-             if (!$activeDelegation->start_at->isSameDay(now())) {
+            if (! $activeDelegation->start_at->isSameDay(now())) {
                 return [
                     'type' => 'delegation_refinement_required',
                     'employee' => $employee,
                     'active_delegation' => $activeDelegation,
                     'next_step' => 'leave',
-                    'timeline' => $this->generateDelegationTimeline($activeDelegation, $employee)
+                    'timeline' => $this->generateDelegationTimeline($activeDelegation, $employee),
                 ];
             }
             $activeDelegation->update(['end_at' => now(), 'end_method' => 'kiosk']);
@@ -222,7 +222,7 @@ class PresenceService
     {
         $time = $data['time'];
         $action = $data['action'];
-        $dt = Carbon::parse(now()->format('Y-m-d') . ' ' . $time);
+        $dt = Carbon::parse(now()->format('Y-m-d').' '.$time);
 
         if ($action === 'start') {
             PresenceEvent::create([
@@ -232,6 +232,7 @@ class PresenceService
                 'start_at' => $dt,
                 'start_method' => 'kiosk',
             ]);
+
             return ['type' => 'checkin', 'message' => 'Shift started retroactively.', 'employee' => $employee, 'time' => $dt->format('g:i A')];
         } else {
             PresenceEvent::create([
@@ -242,21 +243,22 @@ class PresenceService
                 'end_at' => $dt,
                 'start_method' => 'kiosk',
                 'end_method' => 'kiosk',
-                'notes' => 'Retroactive end only shift'
+                'notes' => 'Retroactive end only shift',
             ]);
+
             return ['type' => 'checkout', 'message' => 'Shift ended retroactively.', 'employee' => $employee, 'time' => $dt->format('g:i A')];
         }
     }
 
     public function correctShifts(Employee $employee, array $timeline): void
     {
-        DB::transaction(function() use ($employee, $timeline) {
+        DB::transaction(function () use ($employee, $timeline) {
             // 1. Close the open long-running shift first
             $active = $employee->presenceEvents()->ofType('presence')->active()->first();
             if ($active) {
                 $firstDay = collect($timeline)->first();
                 $this->validateTimeSequence($firstDay['start'], $firstDay['end']);
-                $end = Carbon::parse($firstDay['date'] . ' ' . $firstDay['end']);
+                $end = Carbon::parse($firstDay['date'].' '.$firstDay['end']);
                 $active->update(['end_at' => $end, 'end_method' => 'kiosk_correction']);
             }
 
@@ -267,8 +269,8 @@ class PresenceService
                     'employee_id' => $employee->id,
                     'workplace_id' => $employee->workplace_id,
                     'type' => 'presence',
-                    'start_at' => Carbon::parse($day['date'] . ' ' . $day['start']),
-                    'end_at' => Carbon::parse($day['date'] . ' ' . $day['end']),
+                    'start_at' => Carbon::parse($day['date'].' '.$day['start']),
+                    'end_at' => Carbon::parse($day['date'].' '.$day['end']),
                     'start_method' => 'kiosk_correction',
                     'end_method' => 'kiosk_correction',
                 ]);
@@ -285,13 +287,13 @@ class PresenceService
             ->first();
 
         if (! $activeDelegation) {
-            throw new \Exception("You are not in a delegation.");
+            throw new \Exception('You are not in a delegation.');
         }
 
         DB::transaction(function () use ($employee, $schedule, $activeDelegation) {
             foreach ($schedule as $index => $day) {
                 $this->validateTimeSequence($day['start_time'], $day['end_time']);
-                
+
                 $date = $day['date'];
                 $startTime = $day['start_time'];
                 $endTime = $day['end_time'];
@@ -363,12 +365,16 @@ class PresenceService
 
     public function cancelDelegation(Employee $employee, int $eventId): void
     {
-        DB::transaction(function() use ($employee, $eventId) {
+        DB::transaction(function () use ($employee, $eventId) {
             $delegationEvent = PresenceEvent::findOrFail($eventId);
-            if ($delegationEvent->employee_id !== $employee->id) throw new \Exception("Unauthorized");
+            if ($delegationEvent->employee_id !== $employee->id) {
+                throw new \Exception('Unauthorized');
+            }
 
             // 1. Delete delegation and its linkable
-            if ($delegationEvent->linkable) $delegationEvent->linkable->delete();
+            if ($delegationEvent->linkable) {
+                $delegationEvent->linkable->delete();
+            }
             $delegationEvent->delete();
 
             // 2. Resume previous shift if it was ended today
@@ -388,6 +394,7 @@ class PresenceService
     public function startLeave(Employee $employee, array $data): LeaveRequest
     {
         $type = LeaveType::first(); // Default
+
         return LeaveRequest::create([
             'employee_id' => $employee->id,
             'leave_type_id' => $type->id,
@@ -396,6 +403,52 @@ class PresenceService
             'total_days' => $data['total_days'],
             'status' => 'APPROVED',
         ]);
+    }
+
+    /**
+     * Get the current status of all employees for the Kiosk display.
+     */
+    public function getAllEmployeesStatus(): array
+    {
+        $employees = Employee::with([
+            'presenceEvents' => function ($query) {
+                $query->active();
+            },
+            'leaveRequests' => function ($query) {
+                $query->where('status', 'APPROVED')
+                    ->whereDate('start_date', '<=', now())
+                    ->whereDate('end_date', '>=', now())
+                    ->with('leaveType');
+            },
+        ])->get();
+
+        return $employees->map(function ($employee) {
+            $activePresence = $employee->presenceEvents->where('type', 'presence')->first();
+            $activeDelegation = $employee->presenceEvents->where('type', 'delegation')->first();
+            $activeLeave = $employee->leaveRequests->first();
+
+            $status = 'absent';
+            $details = null;
+
+            if ($activePresence) {
+                $status = 'present';
+                $details = $activePresence->workplace->name ?? null;
+            } elseif ($activeDelegation) {
+                $status = 'delegation';
+                $details = 'În delegație';
+            } elseif ($activeLeave) {
+                $status = 'leave';
+                $details = $activeLeave->leaveType->name ?? 'Concediu';
+            }
+
+            return [
+                'id' => $employee->id,
+                'name' => $employee->name,
+                'avatar' => $employee->avatar_url,
+                'status' => $status,
+                'details' => $details,
+            ];
+        })->values()->toArray();
     }
 
     private function endDelegationAndStartShift(Employee $employee, array $data, PresenceEvent $activeDelegation): array
@@ -408,6 +461,7 @@ class PresenceService
             'start_at' => now(),
             'start_method' => 'kiosk',
         ]);
+
         return ['type' => 'checkin', 'message' => 'Delegation ended, Shift started.', 'employee' => $employee, 'time' => now()->format('g:i A')];
     }
 
@@ -440,9 +494,12 @@ class PresenceService
         $timeline = [];
         $period = CarbonPeriod::create($start->startOfDay(), '1 day', $end->endOfDay());
         foreach ($period as $date) {
-            if ($date->isWeekend()) continue;
+            if ($date->isWeekend()) {
+                continue;
+            }
             $timeline[] = ['date' => $date->format('Y-m-d'), 'start' => '08:00', 'end' => '17:00'];
         }
+
         return $timeline;
     }
 
@@ -451,11 +508,14 @@ class PresenceService
         $timeline = [];
         $period = CarbonPeriod::create($delegation->start_at->startOfDay(), '1 day', now()->endOfDay());
         foreach ($period as $date) {
-            if ($date->isWeekend()) continue;
+            if ($date->isWeekend()) {
+                continue;
+            }
             $start = ($date->isSameDay($delegation->start_at)) ? $delegation->start_at->format('H:i') : '08:00';
             $end = ($date->isToday()) ? now()->format('H:i') : '17:00';
             $timeline[] = ['date' => $date->format('Y-m-d'), 'start' => $start, 'end' => $end];
         }
+
         return $timeline;
     }
 
@@ -464,8 +524,11 @@ class PresenceService
         $count = 0;
         $period = CarbonPeriod::create($start, '1 day', $end);
         foreach ($period as $date) {
-            if (!$date->isWeekend()) $count++;
+            if (! $date->isWeekend()) {
+                $count++;
+            }
         }
+
         return $count;
     }
 }

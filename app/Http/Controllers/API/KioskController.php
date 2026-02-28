@@ -9,15 +9,12 @@ use App\Models\Delegation;
 use App\Models\DelegationPlace;
 use App\Models\Employee;
 use App\Models\LeaveRequest;
-use App\Models\LeaveType;
 use App\Models\PresenceEvent;
-use App\Models\PublicHoliday;
 use App\Models\Vehicle;
-use App\Services\PresenceService;
 use App\Services\GooglePlacesService;
+use App\Services\PresenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class KioskController extends Controller
 {
@@ -48,7 +45,7 @@ class KioskController extends Controller
         }
 
         $result = $this->googlePlacesService->searchPlace($query);
-        
+
         return response()->json([
             'data' => $result ? [$result] : [],
         ]);
@@ -64,7 +61,7 @@ class KioskController extends Controller
         $latestLogins = [];
         foreach ($events as $event) {
             $latestLogins[] = [
-                'id' => $event->id . '_start',
+                'id' => $event->id.'_start',
                 'employee' => $event->employee->name ?? 'Unknown',
                 'avatar' => $event->employee->avatar_url ?? null,
                 'time' => $event->start_at->format('H:i'),
@@ -76,7 +73,7 @@ class KioskController extends Controller
 
             if ($event->end_at) {
                 $latestLogins[] = [
-                    'id' => $event->id . '_end',
+                    'id' => $event->id.'_end',
                     'employee' => $event->employee->name ?? 'Unknown',
                     'avatar' => $event->employee->avatar_url ?? null,
                     'time' => $event->end_at->format('H:i'),
@@ -88,7 +85,7 @@ class KioskController extends Controller
             }
         }
 
-        usort($latestLogins, fn($a, $b) => $b['timestamp'] <=> $a['timestamp']);
+        usort($latestLogins, fn ($a, $b) => $b['timestamp'] <=> $a['timestamp']);
         $latestLogins = array_slice($latestLogins, 0, 20);
 
         $onLeave = LeaveRequest::with(['employee', 'leaveType'])
@@ -117,7 +114,7 @@ class KioskController extends Controller
                     $firstStop = $stops->first();
                     $destination = $firstStop->name;
                     if ($stops->count() > 1) {
-                        $destination .= ' +' . ($stops->count() - 1);
+                        $destination .= ' +'.($stops->count() - 1);
                     }
                 } else {
                     $destination = $delegation->name ?? 'External';
@@ -146,28 +143,31 @@ class KioskController extends Controller
                 'total_employees' => $totalEmployees,
                 'present_count' => $presentCount,
                 'active_delegations_count' => count($activeDelegations),
-            ]
+            ],
         ]);
     }
 
     public function getAllEmployeesStatus(): JsonResponse
     {
-        // Re-use logic if needed but dashboard data covers most now
-        return response()->json(['message' => 'Use getDashboardData instead']);
+        return response()->json([
+            'data' => $this->presenceService->getAllEmployeesStatus(),
+        ]);
     }
 
     public function submitCode(Request $request): JsonResponse
     {
         $codeLength = tenant('code_length') ?? 3;
         $validated = $request->validate([
-            'code' => ['required', 'string', 'max:' . $codeLength],
+            'code' => ['required', 'string', 'max:'.$codeLength],
             'flow' => ['nullable', 'string', \Illuminate\Validation\Rule::in(['regular', 'delegation', 'leave'])],
             'workplace_id' => ['nullable'],
             'device_info' => ['nullable', 'array'],
         ]);
 
         $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
-        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
+        if (! $employee) {
+            return response()->json(['message' => 'Invalid code.'], 404);
+        }
 
         try {
             return response()->json($this->presenceService->processKioskFlow($employee, $validated['flow'] ?? 'regular', $validated));
@@ -185,21 +185,24 @@ class KioskController extends Controller
         ]);
 
         $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
-        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
+        if (! $employee) {
+            return response()->json(['message' => 'Invalid code.'], 404);
+        }
 
         try {
             $this->presenceService->endDelegationWithSchedule($employee, $validated['schedule']);
 
             // If next_step is provided, simulate the flow for that step
-            if (!empty($validated['next_step'])) {
+            if (! empty($validated['next_step'])) {
                 if ($validated['next_step'] === 'regular') {
                     return response()->json([
                         'type' => 'checkin',
                         'message' => 'Delegația a fost încheiată. Acum ești înregistrat la locul de muncă.',
                         'employee' => $employee,
-                        'time' => now()->format('H:i')
+                        'time' => now()->format('H:i'),
                     ]);
                 }
+
                 return response()->json(
                     $this->presenceService->processKioskFlow($employee, $validated['next_step'], ['code' => $validated['code']])
                 );
@@ -221,10 +224,13 @@ class KioskController extends Controller
         ]);
 
         $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
-        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
+        if (! $employee) {
+            return response()->json(['message' => 'Invalid code.'], 404);
+        }
 
         try {
             $result = $this->presenceService->processLateStart($employee, $validated);
+
             return response()->json($result);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
@@ -242,10 +248,13 @@ class KioskController extends Controller
         ]);
 
         $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
-        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
+        if (! $employee) {
+            return response()->json(['message' => 'Invalid code.'], 404);
+        }
 
         try {
             $this->presenceService->correctShifts($employee, $validated['timeline']);
+
             return response()->json(['type' => 'success', 'message' => 'Shifts corrected successfully.']);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
@@ -260,10 +269,13 @@ class KioskController extends Controller
         ]);
 
         $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
-        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
+        if (! $employee) {
+            return response()->json(['message' => 'Invalid code.'], 404);
+        }
 
         try {
-            $this->presenceService->cancelDelegation($employee, (int)$validated['presence_event_id']);
+            $this->presenceService->cancelDelegation($employee, (int) $validated['presence_event_id']);
+
             return response()->json(['type' => 'success', 'message' => 'Delegation cancelled. Previous shift resumed.']);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
@@ -280,10 +292,13 @@ class KioskController extends Controller
         ]);
 
         $employee = Employee::where('workplace_enter_code', $validated['code'])->first();
-        if (! $employee) return response()->json(['message' => 'Invalid code.'], 404);
+        if (! $employee) {
+            return response()->json(['message' => 'Invalid code.'], 404);
+        }
 
         try {
             $leave = $this->presenceService->startLeave($employee, $validated);
+
             return response()->json(['type' => 'success', 'message' => 'Leave recorded.', 'leave' => $leave]);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);

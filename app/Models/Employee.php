@@ -8,11 +8,11 @@ use App\Models\Traits\LogsActivity;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Notifications\Notifiable;
 
 class Employee extends Model
 {
-    use CrudTrait, HasFactory, LogsActivity;
+    use CrudTrait, HasFactory, LogsActivity, Notifiable;
 
     protected $appends = ['name', 'avatar_url'];
 
@@ -31,6 +31,7 @@ class Employee extends Model
         'manager_id',
         'department_id',
         'workplace_id',
+        'whatsapp_number',
     ];
 
     /**
@@ -214,6 +215,22 @@ class Employee extends Model
     }
 
     /**
+     * Route notifications for the WhatsApp channel.
+     */
+    public function routeNotificationForWhatsApp(): ?string
+    {
+        return $this->whatsapp_number ?: null;
+    }
+
+    /**
+     * Route notifications for the mail channel.
+     */
+    public function routeNotificationForMail(): ?string
+    {
+        return $this->email ?: null;
+    }
+
+    /**
      * Get the avatar URL or a placeholder.
      */
     public function getAvatarUrlAttribute()
@@ -221,6 +238,7 @@ class Employee extends Model
         if ($this->avatar) {
             return $this->avatar;
         }
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->first_name . ' ' . $this->last_name) . '&color=7F9CF5&background=EBF4FF';
+
+        return 'https://ui-avatars.com/api/?name='.urlencode($this->first_name.' '.$this->last_name).'&color=7F9CF5&background=EBF4FF';
     }
 }

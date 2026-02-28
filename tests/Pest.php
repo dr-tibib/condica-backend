@@ -21,6 +21,10 @@ use App\Models\Tenant;
 pest()->extend(Tests\TenantTestCase::class)
     ->in('Feature/Feature/API');
 
+// AI feature tests use TenantTestCase
+pest()->extend(Tests\TenantTestCase::class)
+    ->in('Feature/Feature/AI');
+
 // Unit tests use TestCase
 pest()->extend(Tests\TestCase::class)
     ->in('Unit');
@@ -54,12 +58,13 @@ expect()->extend('toBeOne', function () {
 function getUrl(string $path): string
 {
     $tenant = Tenant::first();
-    if (!$tenant) {
-        throw new \Exception("No tenant found for getUrl()");
+    if (! $tenant) {
+        throw new \Exception('No tenant found for getUrl()');
     }
     $domain = $tenant->domains->first();
-    if (!$domain) {
-        throw new \Exception("No domain found for tenant in getUrl()");
+    if (! $domain) {
+        throw new \Exception('No domain found for tenant in getUrl()');
     }
+
     return "http://{$domain->domain}{$path}";
 }
