@@ -9,9 +9,9 @@ class DashboardController extends Controller
     public function index()
     {
         if (function_exists('tenant') && tenant()) {
-            return app(EmployeeDashboardController::class)->dashboard();
+            return app(TenantAdminDashboardController::class)->dashboard();
         }
-        
+
         return app(CentralDashboardController::class)->dashboard();
     }
 }

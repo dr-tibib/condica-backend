@@ -28,6 +28,7 @@ Route::group([
     Route::get('team-command-center/export', 'TeamCommandCenterController@generateAttendanceSheet');
     Route::crud('team-command-center', 'TeamCommandCenterController');
     Route::get('dashboard', 'DashboardController@index')->name('backpack.dashboard');
+    Route::get('dashboard/ai-insights', 'TenantAdminDashboardController@aiInsights')->name('backpack.dashboard.ai-insights');
     Route::crud('vehicle', 'VehicleCrudController');
     Route::crud('delegation-place', 'DelegationPlaceCrudController');
     Route::crud('delegation', 'DelegationCrudController');

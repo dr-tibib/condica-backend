@@ -4,9 +4,8 @@ namespace App\Services;
 
 use App\Models\Employee;
 use Carbon\Carbon;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LegacyReportService
@@ -26,25 +25,25 @@ class LegacyReportService
 
         $employees = Employee::with([
             'department',
-            'presenceEvents' => function($q) use ($startDate, $endDate) {
+            'presenceEvents' => function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('start_at', [$startDate, $endDate])
-                  ->orderBy('start_at');
+                    ->orderBy('start_at');
             },
-            'leaveRequests' => function($q) use ($startDate, $endDate) {
+            'leaveRequests' => function ($q) use ($startDate, $endDate) {
                 $q->where('status', 'APPROVED')
-                  ->where(function($query) use ($startDate, $endDate) {
-                      $query->whereBetween('start_date', [$startDate, $endDate])
+                    ->where(function ($query) use ($startDate, $endDate) {
+                        $query->whereBetween('start_date', [$startDate, $endDate])
                             ->orWhereBetween('end_date', [$startDate, $endDate])
-                            ->orWhere(function($sub) use ($startDate, $endDate) {
+                            ->orWhere(function ($sub) use ($startDate, $endDate) {
                                 $sub->where('start_date', '<', $startDate)
                                     ->where('end_date', '>', $endDate);
                             });
-                  });
-            }
+                    });
+            },
         ])
-        ->orderBy('last_name')
-        ->orderBy('first_name')
-        ->get();
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
 
         $dataArray = [];
         $employeeCount = 0;
@@ -55,7 +54,7 @@ class LegacyReportService
             $employeeCount++;
             $row = [
                 'nr' => $employeeCount,
-                'name' => strtoupper($employee->last_name) . ' ' . $employee->first_name,
+                'name' => strtoupper($employee->last_name).' '.$employee->first_name,
                 'role' => $employee->department->name ?? '-',
                 'worked' => 0,
                 'co' => 0,
@@ -77,16 +76,16 @@ class LegacyReportService
             foreach ($employee->leaveRequests as $leave) {
                 $leaveStart = Carbon::parse($leave->start_date);
                 $leaveEnd = Carbon::parse($leave->end_date);
-                
+
                 for ($d = 1; $d <= $daysInMonth; $d++) {
                     $currentDay = $startDate->copy()->addDays($d - 1);
                     if ($currentDay->between($leaveStart, $leaveEnd)) {
-                        $code = 'C'; 
+                        $code = 'C';
                         if ($leave->leaveType) {
                             if ($leave->leaveType->medical_code_required) {
                                 $code = 'Bo';
                                 $row['cm']++;
-                            } elseif (!$leave->leaveType->is_paid) {
+                            } elseif (! $leave->leaveType->is_paid) {
                                 $code = 'I';
                                 $row['permit']++;
                             } else {
@@ -95,8 +94,8 @@ class LegacyReportService
                         } else {
                             $row['co']++;
                         }
-                        
-                        $row["A$d"] = ''; 
+
+                        $row["A$d"] = '';
                         $row["B$d"] = $code;
                         $row["C$d"] = '';
                         $row["D$d"] = '';
@@ -105,7 +104,7 @@ class LegacyReportService
                 }
             }
 
-            $groupedEvents = $employee->presenceEvents->groupBy(function($event) {
+            $groupedEvents = $employee->presenceEvents->groupBy(function ($event) {
                 return $event->start_at->day;
             });
 
@@ -122,7 +121,7 @@ class LegacyReportService
                 $dayOfWeek = $currentDay->dayOfWeekIso - 1; // 0=Mon, 6=Sun
 
                 $results = $this->calculateStartEndAndTime($timeSpentHours, $dayOfWeek);
-                
+
                 if ($timeSpentHours > 0) {
                     $row["A$day"] = 'P';
                     $row["B$day"] = $results['timeSpent'];
@@ -150,16 +149,16 @@ class LegacyReportService
             'v' => $dataArray,
             'k' => [
                 'month' => $monthsRo[$month - 1],
-                'year' => $year
+                'year' => $year,
             ],
-            'companyName' => (string)(tenant('company_name') ?? tenant('id') ?? 'Condica')
+            'companyName' => (string) (tenant('company_name') ?? tenant('id') ?? 'Condica'),
         ];
     }
 
     public function downloadWithTemplate($year, $month)
     {
         $data = $this->generateLegacyData($year, $month);
-        
+
         $spreadsheet = IOFactory::load($this->templatePath);
         $sheet = $spreadsheet->getActiveSheet();
 
@@ -176,15 +175,15 @@ class LegacyReportService
                 if (is_string($value)) {
                     if (str_contains($value, '{k:')) {
                         foreach ($data['k'] as $key => $val) {
-                            $value = str_replace("{k:$key}", (string)$val, $value);
+                            $value = str_replace("{k:$key}", (string) $val, $value);
                         }
                         $cell->setValue($value);
                     }
                     if (str_contains($value, 'Unitatea:')) {
-                        $value = preg_replace('/Unitatea:.*$/', 'Unitatea: ' . $data['companyName'], $value);
+                        $value = preg_replace('/Unitatea:.*$/', 'Unitatea: '.$data['companyName'], $value);
                         $cell->setValue($value);
                     }
-                    if (!$vRow && str_contains($value, '{v:')) {
+                    if (! $vRow && str_contains($value, '{v:')) {
                         $vRow = $row;
                     }
                 }
@@ -198,12 +197,12 @@ class LegacyReportService
 
         if ($numEmployees > 0 && $vRow) {
             $startRow = $vRow;
-            
+
             // 2.1 Cache template block
             $templateBlockValues = [];
             $templateBlockHeights = [];
             $templateMerging = [];
-            
+
             for ($r = 0; $r < $blockSize; $r++) {
                 $actualRow = $startRow + $r;
                 $templateBlockHeights[$r] = $sheet->getRowDimension($actualRow)->getRowHeight();
@@ -213,13 +212,13 @@ class LegacyReportService
             }
 
             foreach ($sheet->getMergeCells() as $mergeRange) {
-                list($rangeStart, $rangeEnd) = Coordinate::rangeBoundaries($mergeRange);
+                [$rangeStart, $rangeEnd] = Coordinate::rangeBoundaries($mergeRange);
                 if ($rangeStart[1] >= $startRow && $rangeEnd[1] < $startRow + $blockSize) {
                     $templateMerging[] = [
                         'colStart' => $rangeStart[0],
                         'rowStartOffset' => $rangeStart[1] - $startRow,
                         'colEnd' => $rangeEnd[0],
-                        'rowEndOffset' => $rangeEnd[1] - $startRow
+                        'rowEndOffset' => $rangeEnd[1] - $startRow,
                     ];
                 }
             }
@@ -236,7 +235,7 @@ class LegacyReportService
                 for ($r = 0; $r < $blockSize; $r++) {
                     $currentRow = $employeeBaseRow + $r;
                     $templateRow = $startRow + $r;
-                    
+
                     if ($templateBlockHeights[$r] != -1) {
                         $sheet->getRowDimension($currentRow)->setRowHeight($templateBlockHeights[$r]);
                     }
@@ -254,8 +253,8 @@ class LegacyReportService
                     for ($col = 1; $col <= $highestColIndex; $col++) {
                         $templateValue = $templateBlockValues[$r][$col];
                         if (is_string($templateValue) && str_contains($templateValue, '{v:')) {
-                            $newValue = preg_replace_callback('/\{v:([^\}]+)\}/', function($m) use ($employeeData) {
-                                return (string)($employeeData[$m[1]] ?? '');
+                            $newValue = preg_replace_callback('/\{v:([^\}]+)\}/', function ($m) use ($employeeData) {
+                                return (string) ($employeeData[$m[1]] ?? '');
                             }, $templateValue);
                             $sheet->setCellValueByColumnAndRow($col, $currentRow, $newValue);
                         } else {
@@ -269,22 +268,22 @@ class LegacyReportService
                 if ($i > 0) {
                     foreach ($templateMerging as $m) {
                         $sheet->mergeCells(
-                            Coordinate::stringFromColumnIndex($m['colStart']) . ($employeeBaseRow + $m['rowStartOffset']) . ':' .
-                            Coordinate::stringFromColumnIndex($m['colEnd']) . ($employeeBaseRow + $m['rowEndOffset'])
+                            Coordinate::stringFromColumnIndex($m['colStart']).($employeeBaseRow + $m['rowStartOffset']).':'.
+                            Coordinate::stringFromColumnIndex($m['colEnd']).($employeeBaseRow + $m['rowEndOffset'])
                         );
                     }
                 }
             }
         }
 
-        $filename = 'Condica_Prezenta_' . $year . '_' . str_pad($month, 2, '0', STR_PAD_LEFT) . '.xls';
-        
-        return new StreamedResponse(function() use ($spreadsheet) {
+        $filename = 'Condica_Prezenta_'.$year.'_'.str_pad($month, 2, '0', STR_PAD_LEFT).'.xls';
+
+        return new StreamedResponse(function () use ($spreadsheet) {
             $writer = IOFactory::createWriter($spreadsheet, 'Xls');
             $writer->save('php://output');
         }, 200, [
             'Content-Type' => 'application/vnd.ms-excel',
-            'Content-Disposition' => 'attachment;filename="'. $filename .'"',
+            'Content-Disposition' => 'attachment;filename="'.$filename.'"',
             'Cache-Control' => 'max-age=0',
         ]);
     }
@@ -293,8 +292,8 @@ class LegacyReportService
     {
         $suplimentar75 = 0;
         $suplimentar100 = 0;
-        $workedStart = "08:00";
-        $workedEnd = "16:30";
+        $workedStart = '08:00';
+        $workedEnd = '16:30';
         $timeSpent = 8;
 
         if ($timeSpentHours == 0) {
@@ -303,16 +302,16 @@ class LegacyReportService
                 'workedStart' => '',
                 'workedEnd' => '',
                 'suplimentar75' => 0,
-                'suplimentar100' => 0
+                'suplimentar100' => 0,
             ];
         }
 
         if ($dayOfWeek <= 4) {
             $timeThresholds = [
-                9.5 =>  ["timeSpent" => 9,  "upper" => 10.5,  "workedEnd" => "17:30", "additionalTime" => 1],
-                10.5 => ["timeSpent" => 10, "upper" => 11.5, "workedEnd" => "18:30", "additionalTime" => 2],
-                11.5 => ["timeSpent" => 11, "upper" => 12.5, "workedEnd" => "19:30", "additionalTime" => 3],
-                12.5 => ["timeSpent" => 12, "upper" => 24.0, "workedEnd" => "20:30", "additionalTime" => 4]
+                9.5 => ['timeSpent' => 9,  'upper' => 10.5,  'workedEnd' => '17:30', 'additionalTime' => 1],
+                10.5 => ['timeSpent' => 10, 'upper' => 11.5, 'workedEnd' => '18:30', 'additionalTime' => 2],
+                11.5 => ['timeSpent' => 11, 'upper' => 12.5, 'workedEnd' => '19:30', 'additionalTime' => 3],
+                12.5 => ['timeSpent' => 12, 'upper' => 24.0, 'workedEnd' => '20:30', 'additionalTime' => 4],
             ];
 
             foreach ($timeThresholds as $threshold => $values) {
@@ -323,14 +322,14 @@ class LegacyReportService
                     break;
                 }
             }
-            
+
             if ($timeSpentHours < 9.5) {
                 $timeSpent = 8;
-                $workedEnd = "16:30";
+                $workedEnd = '16:30';
             }
         } else {
             $suplimentar100 = round($timeSpentHours);
-            $workedStart = "08:00";
+            $workedStart = '08:00';
             $addMinutes = ($suplimentar100 == 8) ? 30 : 0;
             $workedEnd = Carbon::createFromFormat('H:i', $workedStart)
                 ->addHours($suplimentar100)
@@ -344,7 +343,7 @@ class LegacyReportService
             'workedStart' => $workedStart,
             'workedEnd' => $workedEnd,
             'suplimentar75' => $suplimentar75,
-            'suplimentar100' => $suplimentar100
+            'suplimentar100' => $suplimentar100,
         ];
     }
 }
