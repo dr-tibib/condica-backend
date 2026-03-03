@@ -282,3 +282,14 @@ $pages = visit(['/', '/about', '/contact']);
 $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 </code-snippet>
 </laravel-boost-guidelines>
+
+## Local Development Environment
+
+This project uses **Lando** for local development. Always prefix CLI commands with `lando`:
+
+- `lando artisan ...` instead of `php artisan ...`
+- `lando php ...` instead of `php ...`
+- `lando composer ...` instead of `composer ...`
+- `lando npm ...` instead of `npm ...`
+- Tests: `lando artisan test` (not `php artisan test`)
+- Pint: `lando php vendor/bin/pint --dirty`
