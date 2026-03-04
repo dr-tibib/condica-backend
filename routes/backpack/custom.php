@@ -14,7 +14,7 @@ Route::group([
         (array) config('backpack.base.web_middleware', 'web'),
         (array) config('backpack.base.middleware_key', 'admin')
     ),
-    'namespace' => 'App\Http\Controllers\Admin',
+    'namespace' => 'App\\Http\\Controllers\\Admin',
 ], function () { // custom admin routes
     Route::crud('tenant', 'TenantCrudController');
     Route::crud('workplace', 'WorkplaceCrudController');
@@ -36,6 +36,9 @@ Route::group([
     Route::crud('domain', 'DomainCrudController');
     Route::get('employee-statistics/download-condica', 'EmployeeStatisticsController@downloadCondica');
     Route::crud('employee-statistics', 'EmployeeStatisticsController');
+    Route::get('products', 'ProductsController')->name('backpack.products');
+    Route::get('admin-center', 'AdminModuleController')->name('backpack.admin');
+    Route::crud('products/products', 'ProductsCrudController');
 }); // this should be the absolute last line of this file
 
 /**
