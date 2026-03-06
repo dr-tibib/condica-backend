@@ -25,6 +25,15 @@ class Products extends Model
     // protected $fillable = [];
     // protected $hidden = [];
 
+    protected function casts(): array
+    {
+        return [
+            'available_emag' => 'boolean',
+            'available_glovo' => 'boolean',
+            'available_bazaronline' => 'boolean',
+        ];
+    }
+
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -43,11 +52,30 @@ class Products extends Model
     |--------------------------------------------------------------------------
     */
 
+    protected $appends = ['has_images'];
+
     /*
     |--------------------------------------------------------------------------
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getHasImagesAttribute(): bool
+    {
+        $imageFields = [
+            'image_link', 'image_url_1', 'image_url_2', 'image_url_3',
+            'image_url_4', 'image_url_5', 'image_url_6', 'image_url_8',
+            'image_url_9', 'image_url_10',
+        ];
+
+        foreach ($imageFields as $field) {
+            if (! empty($this->attributes[$field])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /*
     |--------------------------------------------------------------------------

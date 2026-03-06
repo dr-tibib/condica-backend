@@ -46,6 +46,12 @@ class ProductsFromCsvSeeder extends Seeder
                 'old_price_net' => isset($row[8]) && $row[8] !== '' ? (float) $row[8] : null,
                 'tax_value' => isset($row[9]) && $row[9] !== '' ? (float) $row[9] : null,
                 'main_category' => $row[10] ?? null,
+                'category' => isset($row[10]) && $row[10] !== ''
+                    ? trim(explode('>', $row[10], 2)[0])
+                    : null,
+                'subcategory' => isset($row[10]) && str_contains($row[10], '>')
+                    ? trim(explode('>', $row[10], 2)[1])
+                    : null,
                 'manufacturer' => $row[11] ?? null,
                 'supplier' => $row[12] ?? null,
                 'product_url' => $row[13] ?? null,
