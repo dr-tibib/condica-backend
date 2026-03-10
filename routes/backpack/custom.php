@@ -37,8 +37,10 @@ Route::group([
     Route::get('employee-statistics/download-condica', 'EmployeeStatisticsController@downloadCondica');
     Route::crud('employee-statistics', 'EmployeeStatisticsController');
     Route::get('products', 'ProductsController')->name('backpack.products');
+    Route::post('products/sync-site-csv', 'ProductsController@syncSiteCsv')->name('backpack.products.sync-site-csv');
     Route::get('admin-center', 'AdminModuleController')->name('backpack.admin');
     Route::crud('products/products', 'ProductsCrudController');
+    Route::crud('products/sync-logs', 'ProductSyncLogCrudController');
 }); // this should be the absolute last line of this file
 
 /**
