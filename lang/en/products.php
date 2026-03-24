@@ -21,6 +21,7 @@ return [
         'meta_title' => 'Meta title',
         'meta_description' => 'Meta description',
         'images' => 'Images',
+        'old_image_sources' => 'Old image sources',
         'quantity' => 'Quantity',
         'product_url' => 'Product URL',
         'stock' => 'Stock',

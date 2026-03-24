@@ -55,7 +55,7 @@ class SyncProductsFromCsvCommand extends Command
             return self::SUCCESS;
         }
 
-        SyncProductsFromCsvJob::dispatch($tenantId, $source);
+        SyncProductsFromCsvJob::dispatch($tenantId, $source)->onConnection('database');
 
         $this->info("Products sync job dispatched for tenant {$tenantId}.");
 

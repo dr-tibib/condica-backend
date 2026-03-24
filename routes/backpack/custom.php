@@ -38,6 +38,8 @@ Route::group([
     Route::crud('employee-statistics', 'EmployeeStatisticsController');
     Route::get('products', 'ProductsController')->name('backpack.products');
     Route::post('products/sync-site-csv', 'ProductsController@syncSiteCsv')->name('backpack.products.sync-site-csv');
+    Route::post('products/sync-images-to-bunny', 'ProductsController@syncImagesToBunny')->name('backpack.products.sync-images-to-bunny');
+    Route::post('products/sync-images-from-google-drive', 'ProductsController@syncImagesFromGoogleDrive')->name('backpack.products.sync-images-from-google-drive');
     Route::get('admin-center', 'AdminModuleController')->name('backpack.admin');
     Route::crud('products/products', 'ProductsCrudController');
     Route::crud('products/sync-logs', 'ProductSyncLogCrudController');

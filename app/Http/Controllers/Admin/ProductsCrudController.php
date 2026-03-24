@@ -388,7 +388,6 @@ class ProductsCrudController extends CrudController
         CRUD::field('image_link')
             ->label(__('products.fields.image_link'))
             ->type('upload')
-            ->withFiles(['disk' => 'public', 'path' => 'products'])
             ->wrapper(['class' => 'form-group col-md-6'])
             ->tab('Images');
 
@@ -407,6 +406,13 @@ class ProductsCrudController extends CrudController
             ->wrapper(['class' => 'form-group col-md-12'])
             ->tab('Images');
 
+        CRUD::field('old_image_sources_preview')
+            ->label(__('products.fields.old_image_sources'))
+            ->type('custom_html')
+            ->wrapper(['class' => 'form-group col-md-12'])
+            ->value($this->jsonPreviewHtml([]))
+            ->tab('Images');
+
         // Each image URL (50%) + preview (50%) side by side
         foreach ([1, 2, 3, 4, 5, 6, 8, 9, 10] as $n) {
             $fieldName = "image_url_{$n}";
@@ -415,7 +421,6 @@ class ProductsCrudController extends CrudController
             CRUD::field($fieldName)
                 ->label($label)
                 ->type('upload')
-                ->withFiles(['disk' => 'public', 'path' => 'products'])
                 ->wrapper(['class' => 'form-group col-md-6'])
                 ->tab('Images');
 
@@ -510,6 +515,9 @@ class ProductsCrudController extends CrudController
         }
 
         // Image previews
+        CRUD::field('old_image_sources_preview')
+            ->value($this->jsonPreviewHtml($entry->old_image_sources ?? []));
+
         CRUD::field('image_link_preview')
             ->value($this->imagePreviewHtml('image_link', $entry->image_link, 160));
 
@@ -564,6 +572,18 @@ class ProductsCrudController extends CrudController
             })();
             </script>
             HTML;
+    }
+
+    private function jsonPreviewHtml(mixed $value): string
+    {
+        $json = json_encode($value ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        return '<pre style="white-space: pre-wrap; word-break: break-word; max-width: 100%;'
+            .' max-height: 260px; overflow: auto;'
+            .' background: #f8fafc; color: #111827; border: 1px solid #dbe4f0; border-radius: 6px;'
+            .' padding: 12px; font-size: 12px; line-height: 1.45;">'
+            .e($json ?: '{}')
+            .'</pre>';
     }
 
     /**

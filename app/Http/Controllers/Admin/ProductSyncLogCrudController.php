@@ -55,6 +55,8 @@ class ProductSyncLogCrudController extends CrudController
             ->values([
                 'local' => 'Local',
                 'remote' => 'Remote',
+                'bunny' => 'Bunny',
+                'google_drive' => 'Google Drive',
             ])
             ->whenActive(fn (string $value) => $this->crud->addClause('where', 'source_type', $value));
     }

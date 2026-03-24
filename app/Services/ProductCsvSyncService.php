@@ -94,7 +94,7 @@ class ProductCsvSyncService
         }
 
         try {
-            $header = fgetcsv($handle, 0, ';');
+            $header = fgetcsv($handle, 0, ';', '"', '\\');
 
             if ($header === false) {
                 throw new RuntimeException('CSV file is empty.');
@@ -102,7 +102,7 @@ class ProductCsvSyncService
 
             $rowNumber = 1;
 
-            while (($row = fgetcsv($handle, 0, ';')) !== false) {
+            while (($row = fgetcsv($handle, 0, ';', '"', '\\')) !== false) {
                 $rowNumber++;
                 $stats['total_rows']++;
 

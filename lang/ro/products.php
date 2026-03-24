@@ -21,6 +21,7 @@ return [
         'meta_title' => 'Titlu meta',
         'meta_description' => 'Descriere meta',
         'images' => 'Imagini',
+        'old_image_sources' => 'Surse vechi imagini',
         'quantity' => 'Cantitate',
         'product_url' => 'URL produs',
         'stock' => 'Stoc',
