@@ -14,7 +14,7 @@ Route::group([
         (array) config('backpack.base.web_middleware', 'web'),
         (array) config('backpack.base.middleware_key', 'admin')
     ),
-    'namespace' => 'App\Http\Controllers\Admin',
+    'namespace' => 'App\\Http\\Controllers\\Admin',
 ], function () { // custom admin routes
     Route::crud('tenant', 'TenantCrudController');
     Route::crud('workplace', 'WorkplaceCrudController');
@@ -36,6 +36,13 @@ Route::group([
     Route::crud('domain', 'DomainCrudController');
     Route::get('employee-statistics/download-condica', 'EmployeeStatisticsController@downloadCondica');
     Route::crud('employee-statistics', 'EmployeeStatisticsController');
+    Route::get('products', 'ProductsController')->name('backpack.products');
+    Route::post('products/sync-site-csv', 'ProductsController@syncSiteCsv')->name('backpack.products.sync-site-csv');
+    Route::post('products/sync-images-to-bunny', 'ProductsController@syncImagesToBunny')->name('backpack.products.sync-images-to-bunny');
+    Route::post('products/sync-images-from-google-drive', 'ProductsController@syncImagesFromGoogleDrive')->name('backpack.products.sync-images-from-google-drive');
+    Route::get('admin-center', 'AdminModuleController')->name('backpack.admin');
+    Route::crud('products/products', 'ProductsCrudController');
+    Route::crud('products/sync-logs', 'ProductSyncLogCrudController');
 }); // this should be the absolute last line of this file
 
 /**

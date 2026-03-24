@@ -28,13 +28,3 @@
     <x-backpack::menu-dropdown-item title="Public Holidays" icon="la la-calendar" :link="backpack_url('public-holiday')" />
 </x-backpack::menu-dropdown>
 
-<x-backpack::menu-dropdown title="Authentication" icon="la la-lock">
-    <x-backpack::menu-dropdown-item title="Users" icon="la la-user" :link="backpack_url('user')" />
-    <x-backpack::menu-dropdown-item title="Roles" icon="la la-group" :link="backpack_url('role')" />
-    <x-backpack::menu-dropdown-item title="Permissions" icon="la la-key" :link="backpack_url('permission')" />
-</x-backpack::menu-dropdown>
-
-<x-backpack::menu-dropdown title="System" icon="la la-cogs">
-    <x-backpack::menu-dropdown-item title="Activity Logs" icon="la la-stream" :link="backpack_url('activity-log')" />
-    <x-backpack::menu-dropdown-item title="Settings" icon="la la-cog" :link="backpack_url('setting')" />
-</x-backpack::menu-dropdown>
