@@ -10,10 +10,20 @@ use App\Jobs\SyncProductImagesToBunnyJob;
 use App\Jobs\SyncProductsFromCsvJob;
 use App\Models\ProductSyncLog;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
 
-class ProductsController extends Controller
+class ProductsController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view products,backpack'),
+            new Middleware('permission:sync products,backpack', only: ['syncSiteCsv', 'syncImagesToBunny', 'syncImagesFromGoogleDrive']),
+        ];
+    }
+
     public function __invoke(): View
     {
         return view('admin.products.index', [

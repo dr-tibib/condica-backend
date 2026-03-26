@@ -83,6 +83,8 @@ class UserCrudController extends CrudController
                 'label' => __('Default Workplace'),
                 'type' => 'relationship',
                 'attribute' => 'name',
+                'entity' => 'defaultWorkplace',
+                'model' => \App\Models\Workplace::class,
             ]);
 
             $this->crud->addColumn([
@@ -182,6 +184,15 @@ class UserCrudController extends CrudController
             ],
         ]);
 
+        if ($this->isCentralTenant) {
+            $this->crud->addField([
+                'name' => 'is_global_superadmin',
+                'label' => __('Global Superadmin'),
+                'type' => 'checkbox',
+                'tab' => __('User Info'),
+            ]);
+        }
+
         // Tab: Roles & Permissions
         $this->crud->addField([
             // two interconnected entities
@@ -235,7 +246,7 @@ class UserCrudController extends CrudController
             ]);
 
             $this->crud->addField([
-                'name' => 'department',
+                'name' => 'department_id',
                 'label' => __('Department'),
                 'type' => 'relationship',
                 'entity' => 'department',
@@ -252,7 +263,7 @@ class UserCrudController extends CrudController
             ]);
 
              $this->crud->addField([
-                'name' => 'role',
+                'name' => 'job_role',
                 'label' => __('Job Role'),
                 'type' => 'text',
                 'hint' => __('The user\'s position or job title'),

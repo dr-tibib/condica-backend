@@ -24,12 +24,14 @@
                     {{ __('modules.condica') }}
                 </a>
             </li>
+            @can('view products')
             <li class="nav-item">
                 <a class="nav-link {{ $isProductsModule ? 'active' : '' }}" href="{{ backpack_url('products') }}">
                     <i class="la la-cube me-1"></i>
                     Products
                 </a>
             </li>
+            @endcan
             <li class="nav-item">
                 <a class="nav-link {{ $isAdminModule ? 'active' : '' }}" href="{{ backpack_url('admin-center') }}">
                     <i class="la la-cog me-1"></i>

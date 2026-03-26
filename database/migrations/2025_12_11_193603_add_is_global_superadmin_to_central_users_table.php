@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->boolean('is_global_superadmin')->default(false);
-        });
+        if (! Schema::hasColumn('users', 'is_global_superadmin')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->boolean('is_global_superadmin')->default(false);
+            });
+        }
     }
 
     /**

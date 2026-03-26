@@ -79,12 +79,18 @@
                     </div>
 
                     <div class="d-grid gap-2">
+                        @can('sync products')
                         <form method="POST" action="{{ route('backpack.products.sync-site-csv') }}">
                             @csrf
                             <button type="submit" class="btn btn-primary w-100 shadow-sm">
                                 <i class="la la-refresh me-1"></i> Sync site.csv
                             </button>
                         </form>
+                        @else
+                        <button class="btn btn-primary w-100 shadow-sm disabled" disabled title="You do not have permission to sync products.">
+                            <i class="la la-refresh me-1"></i> Sync site.csv
+                        </button>
+                        @endcan
                         @if($lastSiteSyncLog)
                         <a href="{{ backpack_url('products/sync-logs/'.$lastSiteSyncLog->id.'/show') }}" class="btn btn-link btn-sm text-decoration-none text-muted">
                             <i class="la la-external-link-alt me-1"></i> View detailed log
@@ -148,12 +154,18 @@
                     </div>
 
                     <div class="d-grid gap-2">
+                        @can('sync products')
                         <form method="POST" action="{{ route('backpack.products.sync-images-from-google-drive') }}">
                             @csrf
                             <button type="submit" class="btn btn-outline-success w-100 shadow-sm">
                                 <i class="la la-image me-1"></i> Import from Drive
                             </button>
                         </form>
+                        @else
+                        <button class="btn btn-outline-success w-100 shadow-sm disabled" disabled title="You do not have permission to sync products.">
+                            <i class="la la-image me-1"></i> Import from Drive
+                        </button>
+                        @endcan
                         @if($lastGoogleDriveSyncLog)
                         <a href="{{ backpack_url('products/sync-logs/'.$lastGoogleDriveSyncLog->id.'/show') }}" class="btn btn-link btn-sm text-decoration-none text-muted">
                             <i class="la la-external-link-alt me-1"></i> View detailed log
@@ -217,12 +229,18 @@
                     </div>
 
                     <div class="d-grid gap-2">
+                        @can('sync products')
                         <form method="POST" action="{{ route('backpack.products.sync-images-to-bunny') }}">
                             @csrf
                             <button type="submit" class="btn btn-outline-info w-100 shadow-sm">
                                 <i class="la la-upload me-1"></i> Sync to Bunny
                             </button>
                         </form>
+                        @else
+                        <button class="btn btn-outline-info w-100 shadow-sm disabled" disabled title="You do not have permission to sync products.">
+                            <i class="la la-upload me-1"></i> Sync to Bunny
+                        </button>
+                        @endcan
                         @if($lastBunnySyncLog)
                         <a href="{{ backpack_url('products/sync-logs/'.$lastBunnySyncLog->id.'/show') }}" class="btn btn-link btn-sm text-decoration-none text-muted">
                             <i class="la la-external-link-alt me-1"></i> View detailed log
