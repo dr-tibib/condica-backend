@@ -12,11 +12,14 @@
     $isSystemOpen = request()->is(
         $prefix.'/activity-log*',
         $prefix.'/setting*',
+        $prefix.'/tenant*',
     );
 @endphp
-
 <x-backpack::menu-item title="Admin dashboard" icon="la la-home" :link="backpack_url('admin-center')" />
 <x-backpack::menu-separator title="Administration" />
+@if(backpack_user()->hasRole('superadmin') || backpack_user()->is_global_superadmin)
+    <x-backpack::menu-item title="Tenants" icon="la la-building" :link="backpack_url('tenant')" />
+@endif
 
 <x-backpack::menu-dropdown title="Authentication" icon="la la-lock" :open="$isAuthOpen">
     <x-backpack::menu-dropdown-item

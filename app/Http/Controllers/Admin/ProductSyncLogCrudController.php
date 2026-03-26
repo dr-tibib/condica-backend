@@ -21,6 +21,12 @@ class ProductSyncLogCrudController extends CrudController
         CRUD::setModel(ProductSyncLog::class);
         CRUD::setRoute(config('backpack.base.route_prefix').'/products/sync-logs');
         CRUD::setEntityNameStrings('product sync log', 'product sync logs');
+
+        if (! backpack_user()->can('view products')) {
+            $this->crud->denyAccess(['list', 'show', 'reorder']);
+        }
+
+        $this->crud->denyAccess(['create', 'update', 'delete']);
     }
 
     protected function setupListOperation(): void
