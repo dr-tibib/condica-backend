@@ -37,7 +37,10 @@ class ImportProductImagesFromGoogleDrive extends Command
         $tenantId = (string) $this->argument('tenant_id');
         $folderId = (string) ($this->argument('folder_id') ?: env('GOOGLE_DRIVE_FOLDER_ID', ''));
         $accessToken = (string) ($this->option('access-token') ?: env('GOOGLE_DRIVE_ACCESS_TOKEN', ''));
-        $skuRegex = (string) ($this->option('sku-regex') ?: '/^([A-Za-z0-9_-]+)/');
+        // Default SKU regex:
+        // - 14424.jpg, 14424_1.jpg, 14424_2.heic => captures "14424"
+        // - 20260309_14424.jpg, 20260309_14424_2.jpg => captures "14424"
+        $skuRegex = (string) ($this->option('sku-regex') ?: '/^([A-Za-z0-9]+)(?:[_-]\d+)?/');
         $limit = $this->option('limit') !== null ? (int) $this->option('limit') : null;
         $showImported = (bool) $this->option('show-imported');
         $dryRun = (bool) $this->option('dry-run');

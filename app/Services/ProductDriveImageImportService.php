@@ -162,7 +162,9 @@ class ProductDriveImageImportService
     {
         $basename = pathinfo($filename, PATHINFO_FILENAME);
 
-        if (preg_match('/^\d{8}[_-]([A-Za-z0-9_-]+)/', $basename, $datePrefixed)) {
+        // Handle filenames like: 20260309_14424.jpg / 20260309_14424_2.jpg
+        // We only want the article code (14424), not the numeric suffix (_2).
+        if (preg_match('/^\d{8}[_-]([A-Za-z0-9]+)(?:[_-]\d+)?/', $basename, $datePrefixed)) {
             $sku = trim((string) $datePrefixed[1]);
 
             return $sku !== '' ? $sku : null;

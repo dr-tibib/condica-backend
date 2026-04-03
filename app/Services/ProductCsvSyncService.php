@@ -201,7 +201,9 @@ class ProductCsvSyncService
             $product->external_reference_id = $externalReferenceId;
         }
 
-        $product->save();
+        // Avoid triggering Products model "saved" hooks during bulk CSV imports.
+        // Those hooks sync Bunny images and can easily exhaust PHP memory.
+        $product->saveQuietly();
     }
 
     /**
